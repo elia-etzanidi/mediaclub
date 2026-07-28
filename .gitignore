@@ -1,0 +1,28 @@
+# --- Backend (Java/Maven) ---
+backend/target/
+*.class
+*.jar
+*.war
+
+# --- Frontend (Node/React) - for when that folder is added ---
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# --- IDEs ---
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# --- Secrets ---
+.env
+**/.env
+**/application-local.properties
+
+# --- OS ---
+.DS_Store
+Thumbs.db
