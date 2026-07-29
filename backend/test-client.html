@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Media Club - WebSocket Test Client</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<style>
+  body { font-family: sans-serif; max-width: 700px; margin: 30px auto; padding: 0 15px; }
+  fieldset { margin-bottom: 15px; padding: 10px; }
+  input { width: 100%; padding: 6px; margin: 4px 0; box-sizing: border-box; }
+  button { padding: 6px 12px; margin-top: 4px; cursor: pointer; }
+  #log { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 8px; background: #fafafa; font-size: 13px; }
+  #log div { margin-bottom: 4px; }
+  .msg { color: #222; }
+  .typing { color: #888; font-style: italic; }
+  .presence { color: #2a7; }
+  .error { color: #c33; font-weight: bold; }
+  .system { color: #999; }
+</style>
+</head>
+<body>
+
+<h2>Media Club — WebSocket Test Client</h2>
+
+<fieldset>
+  <legend>1. Login</legend>
+  <input id="username" placeholder="username" value="alice">
+  <input id="password" placeholder="password" type="password" value="password123">
+  <button onclick="login()">Log in</button>
+  <div id="loginStatus" class="system"></div>
+</fieldset>
+
+<fieldset>
+  <legend>2. Connect WebSocket</legend>
+  <button onclick="connect()">Connect</button>
+  <button onclick="disconnect()">Disconnect</button>
+  <div id="connectionStatus" class="system">Not connected</div>
+</fieldset>
+
+<fieldset>
+  <legend>3. Subscribe & chat</legend>
+  <input id="clubId" placeholder="club ID (e.g. 1) - for presence events" value="1">
+  <input id="channelId" placeholder="channel ID (e.g. 1)" value="1">
+  <button onclick="subscribeChannel()">Subscribe to channel</button>
+  <input id="messageContent" placeholder="type a message...">
+  <button onclick="sendMessage()">Send</button>
+  <button onmousedown="sendTyping(true)" onmouseup="sendTyping(false)" onmouseleave="sendTyping(false)">Hold to show "typing"</button>
+</fieldset>
+
+<h3>Log</h3>
+<div id="log"></div>
+
+<script>
+let token = null;
+let stompClient = null;
+let subscribedChannelId = null;
+
+const API_BASE = "http://localhost:8080";
+
+function log(text, cssClass) {
+  const el = document.getElementById("log");
+  const line = document.createElement("div");
+  line.className = cssClass || "system";
+  line.textContent = new Date().toLocaleTimeString() + " — " + text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function login() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  try {
+    const res = await fetch(API_BASE + "/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      document.getElementById("loginStatus").textContent = "Login failed: " + (data.error || res.status);
+      document.getElementById("loginStatus").className = "error";
+      return;
+    }
+
+    token = data.token;
+    document.getElementById("loginStatus").textContent = "Logged in as " + data.username + " (userId " + data.userId + ")";
+    document.getElementById("loginStatus").className = "presence";
+    log("Logged in as " + data.username, "system");
+  } catch (e) {
+    document.getElementById("loginStatus").textContent = "Error: " + e.message;
+    document.getElementById("loginStatus").className = "error";
+  }
+}
+
+function connect() {
+  if (!token) {
+    alert("Log in first");
+    return;
+  }
+
+  const socket = new SockJS(API_BASE + "/ws");
+  stompClient = Stomp.over(socket);
+  stompClient.debug = null; // set to console.log to see raw STOMP frames
+
+  stompClient.connect(
+    { Authorization: "Bearer " + token },
+    () => {
+      document.getElementById("connectionStatus").textContent = "Connected";
+      document.getElementById("connectionStatus").className = "presence";
+      log("WebSocket connected", "system");
+
+      // personal error queue - any permission/validation error from the server lands here
+      stompClient.subscribe("/user/queue/errors", (frame) => {
+        log("ERROR: " + frame.body, "error");
+      });
+    },
+    (error) => {
+      document.getElementById("connectionStatus").textContent = "Connection failed";
+      document.getElementById("connectionStatus").className = "error";
+      log("Connection error: " + JSON.stringify(error), "error");
+    }
+  );
+}
+
+function disconnect() {
+  if (stompClient) {
+    stompClient.disconnect(() => {
+      document.getElementById("connectionStatus").textContent = "Disconnected";
+      document.getElementById("connectionStatus").className = "system";
+      log("Disconnected", "system");
+    });
+  }
+}
+
+function subscribeChannel() {
+  if (!stompClient || !stompClient.connected) {
+    alert("Connect first");
+    return;
+  }
+
+  const channelId = document.getElementById("channelId").value;
+  subscribedChannelId = channelId;
+
+  stompClient.subscribe("/topic/channel/" + channelId, (frame) => {
+    const msg = JSON.parse(frame.body);
+    log(msg.senderUsername + ": " + msg.content, "msg");
+  });
+
+  stompClient.subscribe("/topic/channel/" + channelId + "/typing", (frame) => {
+    const event = JSON.parse(frame.body);
+    log(event.username + (event.typing ? " is typing..." : " stopped typing"), "typing");
+  });
+
+  const clubId = document.getElementById("clubId").value;
+  stompClient.subscribe("/topic/club/" + clubId + "/presence", (frame) => {
+    const event = JSON.parse(frame.body);
+    log(event.username + " → " + event.type, "presence");
+  });
+
+  log("Subscribed to channel " + channelId + " (and club 1 presence)", "system");
+}
+
+function sendMessage() {
+  if (!stompClient || !stompClient.connected || !subscribedChannelId) {
+    alert("Connect and subscribe to a channel first");
+    return;
+  }
+
+  const content = document.getElementById("messageContent").value;
+  if (!content) return;
+
+  stompClient.send(
+    "/app/channel/" + subscribedChannelId + "/send",
+    {},
+    JSON.stringify({ content })
+  );
+
+  document.getElementById("messageContent").value = "";
+}
+
+function sendTyping(isTyping) {
+  if (!stompClient || !stompClient.connected || !subscribedChannelId) return;
+
+  stompClient.send(
+    "/app/channel/" + subscribedChannelId + "/typing",
+    {},
+    JSON.stringify({ typing: isTyping })
+  );
+}
+</script>
+
+</body>
+</html>

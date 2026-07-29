@@ -17,10 +17,10 @@ Each subfolder is an independent project with its own build tooling — see each
 ## Current status
 
 - [x] Project scaffold + JWT authentication (register/login)
-- [ ] Club / Channel / Membership entities + CRUD
+- [x] Club / Channel / Membership entities + CRUD
+- [x] WebSocket real-time messaging (send/receive, typing indicators, presence, reactions)
+- [x] Reactions, moderation actions (delete message, kick, promote), roles/permissions
 - [ ] External media API integration (Open Library / TMDB / RAWG)
-- [ ] WebSocket real-time messaging
-- [ ] Reactions, moderation actions, roles/permissions
 - [ ] Direct messages
 - [ ] Notification preferences
 - [ ] React frontend
