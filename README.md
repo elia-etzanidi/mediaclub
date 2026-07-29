@@ -20,8 +20,8 @@ Each subfolder is an independent project with its own build tooling — see each
 - [x] Club / Channel / Membership entities + CRUD
 - [x] WebSocket real-time messaging (send/receive, typing indicators, presence, reactions)
 - [x] Reactions, moderation actions (delete message, kick, promote), roles/permissions
+- [x] Direct messages (requires shared club membership - no cold-contact messaging)
 - [ ] External media API integration (Open Library / TMDB / RAWG)
-- [ ] Direct messages
 - [ ] Notification preferences
 - [ ] React frontend
 

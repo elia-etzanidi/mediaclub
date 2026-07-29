@@ -48,6 +48,14 @@
   <button onmousedown="sendTyping(true)" onmouseup="sendTyping(false)" onmouseleave="sendTyping(false)">Hold to show "typing"</button>
 </fieldset>
 
+<fieldset>
+  <legend>4. Direct messages</legend>
+  <input id="conversationId" placeholder="conversation ID (get via POST /api/dms first)" value="1">
+  <button onclick="subscribeDm()">Subscribe to conversation</button>
+  <input id="dmContent" placeholder="type a DM...">
+  <button onclick="sendDm()">Send DM</button>
+</fieldset>
+
 <h3>Log</h3>
 <div id="log"></div>
 
@@ -189,6 +197,48 @@ function sendTyping(isTyping) {
     {},
     JSON.stringify({ typing: isTyping })
   );
+}
+
+let subscribedConversationId = null;
+
+function subscribeDm() {
+  if (!stompClient || !stompClient.connected) {
+    alert("Connect first");
+    return;
+  }
+
+  const conversationId = document.getElementById("conversationId").value;
+  subscribedConversationId = conversationId;
+
+  stompClient.subscribe("/user/queue/dm/" + conversationId, (frame) => {
+    const msg = JSON.parse(frame.body);
+    log("[DM] " + msg.senderUsername + ": " + msg.content, "msg");
+  });
+
+  stompClient.subscribe("/user/queue/dm/" + conversationId + "/typing", (frame) => {
+    const event = JSON.parse(frame.body);
+    log("[DM] " + event.username + (event.typing ? " is typing..." : " stopped typing"), "typing");
+  });
+
+  log("Subscribed to conversation " + conversationId, "system");
+}
+
+function sendDm() {
+  if (!stompClient || !stompClient.connected || !subscribedConversationId) {
+    alert("Connect and subscribe to a conversation first");
+    return;
+  }
+
+  const content = document.getElementById("dmContent").value;
+  if (!content) return;
+
+  stompClient.send(
+    "/app/dm/" + subscribedConversationId + "/send",
+    {},
+    JSON.stringify({ content })
+  );
+
+  document.getElementById("dmContent").value = "";
 }
 </script>
 

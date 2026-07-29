@@ -51,8 +51,3 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 Both return a JSON response with a `token` — use it as `Authorization: Bearer <token>` on any future protected endpoint.
-
-## Important notes
-
-- **Never commit real secrets.** `app.jwt.secret`, `TMDB_API_KEY`, and `RAWG_API_KEY` are read from environment variables in `application.properties`. Set them locally via your IDE run config or a `.env` file that's excluded from git (already in `.gitignore`).
-- Swap H2 for Postgres before your final demo/deployment by updating the `spring.datasource.*` properties and removing the H2 dependency scope restriction if needed.
