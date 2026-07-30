@@ -21,8 +21,8 @@ Each subfolder is an independent project with its own build tooling — see each
 - [x] WebSocket real-time messaging (send/receive, typing indicators, presence, reactions)
 - [x] Reactions, moderation actions (delete message, kick, promote), roles/permissions
 - [x] Direct messages (requires shared club membership - no cold-contact messaging)
+- [x] Notification preferences (mute channel/club/DMs, with live push notifications)
 - [ ] External media API integration (Open Library / TMDB / RAWG)
-- [ ] Notification preferences
 - [ ] React frontend
 
 ## Running locally

@@ -45,6 +45,10 @@ public class User {
     @Builder.Default
     private boolean isGlobalAdmin = false;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean dmNotificationsMuted = false;
+
     private Instant lastSeen;
 
     @Column(nullable = false, updatable = false)

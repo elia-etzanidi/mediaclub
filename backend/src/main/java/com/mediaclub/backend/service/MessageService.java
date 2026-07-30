@@ -1,6 +1,7 @@
 package com.mediaclub.backend.service;
 
 import com.mediaclub.backend.dto.MessageResponse;
+import com.mediaclub.backend.dto.NotificationEvent;
 import com.mediaclub.backend.dto.ReactionSummary;
 import com.mediaclub.backend.entity.*;
 import com.mediaclub.backend.exception.BadRequestException;
@@ -11,9 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,6 +32,8 @@ public class MessageService {
     private final ChannelRepository channelRepository;
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final NotificationPreferenceService notificationPreferenceService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public MessageResponse sendMessage(Long channelId, Long senderId, String content) {
@@ -45,7 +50,42 @@ public class MessageService {
                 .build();
         message = messageRepository.save(message);
 
+        notifyOtherMembers(channel, sender, content);
+
         return MessageResponse.from(message, List.of());
+    }
+
+    /**
+     * Pushes a lightweight notification to every other club member who isn't muted
+     * for this channel - lets the frontend show a badge/toast even if they're not
+     * actively looking at this channel right now.
+     */
+    private void notifyOtherMembers(Channel channel, User sender, String content) {
+        Long clubId = channel.getClub().getId();
+        String preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+
+        List<Membership> members = membershipRepository.findByClubId(clubId);
+        for (Membership member : members) {
+            Long memberId = member.getUser().getId();
+            if (memberId.equals(sender.getId())) {
+                continue; // don't notify yourself
+            }
+            if (notificationPreferenceService.isChannelMuted(memberId, channel.getId(), clubId)) {
+                continue;
+            }
+
+            NotificationEvent event = new NotificationEvent(
+                    NotificationEvent.NotificationType.CHANNEL_MESSAGE,
+                    clubId,
+                    channel.getId(),
+                    null,
+                    channel.getName(),
+                    sender.getUsername(),
+                    preview,
+                    Instant.now()
+            );
+            messagingTemplate.convertAndSendToUser(member.getUser().getUsername(), "/queue/notifications", event);
+        }
     }
 
     public List<MessageResponse> getHistory(Long channelId, Long requesterId, int limit) {

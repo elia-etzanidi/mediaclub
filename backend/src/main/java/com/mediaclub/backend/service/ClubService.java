@@ -8,8 +8,12 @@ import com.mediaclub.backend.exception.ResourceNotFoundException;
 import com.mediaclub.backend.repository.ChannelRepository;
 import com.mediaclub.backend.repository.ClubRepository;
 import com.mediaclub.backend.repository.MembershipRepository;
+import com.mediaclub.backend.repository.MessageRepository;
+import com.mediaclub.backend.repository.NotificationPreferenceRepository;
+import com.mediaclub.backend.repository.ReactionRepository;
 import com.mediaclub.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +26,11 @@ public class ClubService {
     private final ClubRepository clubRepository;
     private final ChannelRepository channelRepository;
     private final MembershipRepository membershipRepository;
+    private final MessageRepository messageRepository;
+    private final ReactionRepository reactionRepository;
+    private final NotificationPreferenceRepository notificationPreferenceRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * Creates a club and its 4 standard channels (general, spoilers, info, requests)
@@ -94,6 +102,11 @@ public class ClubService {
                 .build();
         membership = membershipRepository.save(membership);
 
+        messagingTemplate.convertAndSend(
+                "/topic/club/" + clubId + "/presence",
+                new PresenceEvent(clubId, user.getId(), user.getUsername(), PresenceEvent.PresenceEventType.JOINED)
+        );
+
         return MembershipResponse.from(membership);
     }
 
@@ -101,7 +114,13 @@ public class ClubService {
     public void leaveClub(Long clubId, Long userId) {
         Membership membership = membershipRepository.findByUserIdAndClubId(userId, clubId)
                 .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this club"));
+        String username = membership.getUser().getUsername();
         membershipRepository.delete(membership);
+
+        messagingTemplate.convertAndSend(
+                "/topic/club/" + clubId + "/presence",
+                new PresenceEvent(clubId, userId, username, PresenceEvent.PresenceEventType.LEFT)
+        );
     }
 
     public List<MembershipResponse> getMembers(Long clubId, String searchQuery) {
@@ -136,6 +155,9 @@ public class ClubService {
 
         requireModerator(channel.getClub().getId(), requesterUserId, requesterIsGlobalAdmin);
 
+        reactionRepository.deleteByMessage_ChannelId(channelId);
+        messageRepository.deleteByChannelId(channelId);
+        notificationPreferenceRepository.deleteByChannelId(channelId);
         channelRepository.delete(channel);
     }
 
@@ -160,7 +182,7 @@ public class ClubService {
         membershipRepository.delete(targetMembership);
     }
 
-     /**
+    /**
      * Only global admins can delete a club entirely - too destructive for a single
      * per-club moderator to do unilaterally.
      */
@@ -170,6 +192,9 @@ public class ClubService {
             throw new ForbiddenException("Only a global admin can delete a club");
         }
         Club club = getClubOrThrow(clubId);
+        reactionRepository.deleteByMessage_Channel_ClubId(clubId);
+        messageRepository.deleteByChannel_ClubId(clubId);
+        notificationPreferenceRepository.deleteByClubId(clubId);
         membershipRepository.deleteByClubId(clubId);
         channelRepository.deleteByClubId(clubId);
         clubRepository.delete(club);

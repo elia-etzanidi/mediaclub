@@ -2,6 +2,7 @@ package com.mediaclub.backend.service;
 
 import com.mediaclub.backend.dto.ConversationResponse;
 import com.mediaclub.backend.dto.DirectMessageResponse;
+import com.mediaclub.backend.dto.NotificationEvent;
 import com.mediaclub.backend.entity.Conversation;
 import com.mediaclub.backend.entity.DirectMessage;
 import com.mediaclub.backend.entity.Membership;
@@ -17,9 +18,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +36,8 @@ public class DirectMessageService {
     private final DirectMessageRepository directMessageRepository;
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final NotificationPreferenceService notificationPreferenceService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * Starts a new conversation, or returns the existing one if these two users
@@ -88,6 +93,22 @@ public class DirectMessageService {
                 .build();
         message = directMessageRepository.save(message);
 
+        User recipient = conversation.getUserA().getId().equals(senderId) ? conversation.getUserB() : conversation.getUserA();
+        if (!notificationPreferenceService.isDmMuted(recipient.getId())) {
+            String preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+            NotificationEvent event = new NotificationEvent(
+                    NotificationEvent.NotificationType.DIRECT_MESSAGE,
+                    null,
+                    null,
+                    conversationId,
+                    sender.getUsername(),
+                    sender.getUsername(),
+                    preview,
+                    Instant.now()
+            );
+            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", event);
+        }
+
         return DirectMessageResponse.from(message);
     }
 
@@ -117,14 +138,16 @@ public class DirectMessageService {
         directMessageRepository.save(message);
     }
 
+    /**
+     * Returns both participants' usernames - used by the WebSocket layer to know who
+     * to push a new message to in real time. Resolved here (inside this transactional
+     * method) rather than handing back the raw entity, since the lazy-loaded User
+     * proxies on Conversation can't be read once this method's session has closed.
+     */
     @Transactional(readOnly = true)
     public Set<String> getParticipantUsernames(Long conversationId) {
         Conversation conversation = getConversationOrThrow(conversationId);
         return Set.of(conversation.getUserA().getUsername(), conversation.getUserB().getUsername());
-    }
-
-    public Conversation getConversationEntity(Long conversationId) {
-        return getConversationOrThrow(conversationId);
     }
 
     // --- internal helpers ---

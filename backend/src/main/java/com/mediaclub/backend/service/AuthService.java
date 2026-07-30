@@ -8,7 +8,6 @@ import com.mediaclub.backend.exception.BadRequestException;
 import com.mediaclub.backend.repository.UserRepository;
 import com.mediaclub.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,9 +23,6 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
-    @Value("${app.bootstrap-admin-username:}")
-    private String bootstrapAdminUsername;
-
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException("Username is already taken");
@@ -35,15 +31,11 @@ public class AuthService {
             throw new BadRequestException("Email is already registered");
         }
 
-        boolean isBootstrapAdmin = bootstrapAdminUsername != null
-                && !bootstrapAdminUsername.isBlank()
-                && bootstrapAdminUsername.equalsIgnoreCase(request.getUsername());
-
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .isGlobalAdmin(isBootstrapAdmin)
+                .isGlobalAdmin(false)
                 .status(User.UserStatus.OFFLINE)
                 .build();
 
