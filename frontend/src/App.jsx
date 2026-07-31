@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Page Imports
 import WelcomePage from './pages/Welcome/WelcomePage';
 import LoginPage from './pages/Login/LoginPage';
-import SignupPage from './pages/Signup/SignupPage';
+import SignupPage from './pages/Login/SignupPage';
 
 function App() {
   return (

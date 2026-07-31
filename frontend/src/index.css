@@ -52,18 +52,17 @@
 
 body {
   margin: 0;
+  padding: 0;
+  background-color: #004643; 
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+.papercut-theme {
+  min-height: 100vh;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 1920 1000' preserveAspectRatio='xMinYMid slice' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='shadow' x='-20%25' y='-20%25' width='150%25' height='150%25'%3E%3CfeDropShadow dx='15' dy='15' stdDeviation='20' flood-color='%23001a18' flood-opacity='0.6' /%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='%23004643' /%3E%3Cpath d='M0,0 L650,0 C650,150 400,180 400,333 C400,486 800,483 800,666 C800,849 650,850 650,1000 L0,1000 Z' fill='%23357979' filter='url(%23shadow)' /%3E%3Cpath d='M0,0 L350,0 C350,150 200,180 200,333 C200,486 500,483 500,666 C500,849 350,850 350,1000 L0,1000 Z' fill='%23fafafa' filter='url(%23shadow)' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: left center;
+  background-attachment: fixed;
 }
 
 h1,

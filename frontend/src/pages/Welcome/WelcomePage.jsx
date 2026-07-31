@@ -4,21 +4,38 @@ import './WelcomePage.css';
 
 function WelcomePage() {
   return (
-    <div className="welcome-container">
-      <h1>Welcome to MediaClub</h1>
+    <div className="welcome-container papercut-theme">
+      {/* This empty div pushes the content to the right */}
+      <div className="welcome-spacer"></div>
 
-      <p className="welcome-subtitle">
-        Discover, track, and share your favorite media.
-      </p>
+      {/* Right-aligned content block */}
+      <div className="welcome-content">
+        <h1 className="welcome-title">
+          Join discussions on your favorite media
+        </h1>
+        
+        <p className="welcome-description">
+          Discover like-minded people through vibrant communities and exclusive clubs. 
+          Dive deeper into the books, movies, and shows you love and never watch alone again.
+        </p>
 
-      <div className="welcome-button-group">
-        <Link to="/login" className="welcome-primary-button">
-          Log In
-        </Link>
+        <div className="welcome-actions">
+          {/* Add state to let the target routes know we came from Welcome */}
+          <Link to="/signup" state={{ fromWelcome: true }} className="btn btn-filled-white">Join the club</Link>
+          <Link to="/login" state={{ fromWelcome: true }} className="btn btn-hollow">Login</Link>
+        </div>
 
-        <Link to="/signup" className="welcome-secondary-button">
-          Sign Up
-        </Link>
+        <div className="welcome-tags">
+          <span className="tag">
+            <span className="tag-icon">👥</span> 16,000+ active members
+          </span>
+          <span className="tag">
+            <span className="tag-icon">📚</span> 500+ active clubs
+          </span>
+          <span className="tag">
+            <span className="tag-icon">💬</span> Daily discussions
+          </span>
+        </div>
       </div>
     </div>
   );
