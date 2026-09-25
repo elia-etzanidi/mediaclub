@@ -5,7 +5,6 @@ import './WelcomePage.css';
 function WelcomePage() {
   return (
     <div className="welcome-container papercut-theme">
-      {/* This empty div pushes the content to the right */}
       <div className="welcome-spacer"></div>
 
       {/* Right-aligned content block */}
@@ -20,7 +19,6 @@ function WelcomePage() {
         </p>
 
         <div className="welcome-actions">
-          {/* Add state to let the target routes know we came from Welcome */}
           <Link to="/signup" state={{ fromWelcome: true }} className="btn btn-filled-white">Join the club</Link>
           <Link to="/login" state={{ fromWelcome: true }} className="btn btn-hollow">Login</Link>
         </div>
