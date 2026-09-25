@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import './HomePage.css';
+import ProfilePopup from '../ProfilePopup/ProfilePopup';
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState('clubs');
   
-  // New states for the inner content
-  const [selectedItemId, setSelectedItemId] = useState(1); // Defaults to the first item
-  const [selectedChannelId, setSelectedChannelId] = useState(1); // Defaults to first channel
-  const [showMembers, setShowMembers] = useState(false); // Toggles the members sidebar
+  // Inner Content
+  const [selectedItemId, setSelectedItemId] = useState(1);
+  const [selectedChannelId, setSelectedChannelId] = useState(1);
+  const [showMembers, setShowMembers] = useState(false); 
+  
+  // Profile Popup
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
 
-  // Mock data updated with channels and members for clubs
+  // Mock data for the current logged-in user
+  const currentUser = {
+    username: 'DemoUser',
+    email: 'demouser@example.com',
+    pfp: 'https://via.placeholder.com/40',
+    createdAt: 'October 15, 2023'
+  };
+
   const clubs = [
     { 
       id: 1, 
@@ -50,11 +61,7 @@ const HomePage = () => {
   ];
 
   const displayList = activeTab === 'clubs' ? clubs : people;
-  
-  // Get the currently selected item object based on the active tab
   const activeItem = displayList.find(item => item.id === selectedItemId) || displayList[0];
-  
-  // Get the active channel for the top nav
   const activeChannel = activeItem?.channels?.find(c => c.id === selectedChannelId) || activeItem?.channels?.[0];
 
   return (
@@ -75,8 +82,16 @@ const HomePage = () => {
           </div>
         </div>
         
-        <div className="nav-right">
-          <img src="https://via.placeholder.com/40" alt="Profile" className="profile-pic" />
+        {/* Updated nav-right to handle the popup */}
+        <div className="nav-right" style={{ position: 'relative' }}>
+          <img 
+            src={currentUser.pfp} 
+            alt="Profile" 
+            className="profile-pic" 
+            onClick={() => setShowProfilePopup(!showProfilePopup)}
+            style={{ cursor: 'pointer' }}
+          />
+          {showProfilePopup && <ProfilePopup user={currentUser} />}
         </div>
       </nav>
 
@@ -90,7 +105,7 @@ const HomePage = () => {
               className={`tab-button ${activeTab === 'clubs' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('clubs');
-                setSelectedItemId(clubs[0].id); // Reset selection when switching tabs
+                setSelectedItemId(clubs[0].id);
               }}
             >
               Clubs
@@ -127,12 +142,9 @@ const HomePage = () => {
 
         {/* Right Component: Server/Chat Area */}
         <section className="right-pane">
-          
-          {/* Render Club Component if on 'clubs' tab and an item is selected */}
           {activeTab === 'clubs' && activeItem && (
             <div className="club-view">
               
-              {/* Club Inner Sidebar */}
               <div className="club-sidebar">
                 <div className="club-header">
                   <h2>{activeItem.name}</h2>
@@ -154,15 +166,12 @@ const HomePage = () => {
                 </div>
               </div>
 
-              {/* Club Chat Window Area */}
               <div className="club-chat-area">
-                {/* Inner Top Nav for the active channel */}
                 <div className="chat-top-nav">
                   <div className="chat-nav-title">
                     <span className="hash-icon">#</span> {activeChannel?.name || 'select-channel'}
                   </div>
                   
-                  {/* Members Toggle Button */}
                   <button 
                     className={`members-toggle ${showMembers ? 'active' : ''}`}
                     onClick={() => setShowMembers(!showMembers)}
@@ -177,13 +186,11 @@ const HomePage = () => {
                   </button>
                 </div>
 
-                {/* Blank Space for future messages */}
                 <div className="chat-messages-container">
                   {/* Messages will go here */}
                 </div>
               </div>
 
-              {/* Right Members Sidebar (Toggled by button) */}
               {showMembers && (
                 <div className="members-sidebar">
                   <div className="members-title">MEMBERS — {activeItem.members?.length || 0}</div>
@@ -197,18 +204,14 @@ const HomePage = () => {
                   </div>
                 </div>
               )}
-
             </div>
           )}
 
-          {/* Render DM Component placeholder if on 'people' tab */}
           {activeTab === 'people' && activeItem && (
             <div className="dm-view-placeholder">
               <h2>Direct Message with {activeItem.name}</h2>
-              {/* DM structure will go here later */}
             </div>
           )}
-
         </section>
         
       </main>

@@ -1,0 +1,27 @@
+/* theme.css */
+:root {
+  /* Brand Colors */
+  --primary-dark: #004643;
+  --primary-medium: #357979;
+  --primary-light: #bad3ce;
+  --accent: #f4f8f7;
+  
+  /* Text Colors */
+  --text-main: #112625;
+  --text-secondary: #1a3331;
+  --text-inverse: #fafafa;
+  --text-muted: rgba(0, 70, 67, 0.6);
+  --text-placeholder: #91a1a4;
+  
+  /* Backgrounds & Borders */
+  --bg-main: #f4f8f7;
+  --bg-panel: #ffffff;
+  --bg-sidebar: #eaf2f1;
+  --bg-input: #fafafa;
+  --bg-glass: rgba(250, 250, 250, 0.95);
+  
+  --border-subtle: rgba(0, 70, 67, 0.15);
+  --border-input: #91a1a4;
+  
+  --shadow-color: rgba(0, 70, 67, 0.15);
+}

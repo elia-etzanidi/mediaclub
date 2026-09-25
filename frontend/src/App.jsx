@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import './theme.css';
 
 // Page Imports
 import WelcomePage from './pages/Welcome/WelcomePage';

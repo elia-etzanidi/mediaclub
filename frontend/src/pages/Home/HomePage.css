@@ -1,11 +1,13 @@
+/* HomePage.css */
+
 /* Base Layout */
 .home-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background-color: #f4f8f7; 
-  color: #112625; 
+  background-color: var(--bg-main); 
+  color: var(--text-main); 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
 }
@@ -17,8 +19,8 @@
   align-items: center;
   height: 60px;
   padding: 0 20px;
-  background-color: #004643; 
-  color: #fafafa;
+  background-color: var(--primary-dark); 
+  color: var(--text-inverse);
   border-bottom: 1px solid rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
 }
@@ -76,7 +78,7 @@
   height: 100%;
   background-color: transparent;
   border: none;
-  color: #fafafa;
+  color: var(--text-inverse);
   outline: none;
   font-size: 0.9rem;
   text-align: center;
@@ -108,9 +110,9 @@
   flex: 0 0 15%;
   min-width: 180px;
   max-width: 240px;
-  background-color: #bad3ce; 
-  border-right: 1px solid rgba(0, 70, 67, 0.2);
-  color: #112625; 
+  background-color: var(--primary-light); 
+  border-right: 1px solid var(--border-subtle);
+  color: var(--text-main); 
   display: flex;
   flex-direction: column; 
 }
@@ -120,7 +122,7 @@
   padding: 12px;
   gap: 8px;
   background-color: rgba(0, 70, 67, 0.08);
-  border-bottom: 1px solid rgba(0, 70, 67, 0.15);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .tab-button {
@@ -129,7 +131,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #004643;
+  color: var(--primary-dark);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -150,7 +152,7 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   margin: 2px 8px;
-  color: #112625;
+  color: var(--text-main);
 }
 
 .list-cell:hover {
@@ -167,59 +169,7 @@
   border-radius: 50%; 
   object-fit: cover;
   margin-right: 10px;
-  background-color: rgba(0, 70, 67, 0.2);
-  flex-shrink: 0;
-}
-
-.cell-name {
-  font-size: 0.85rem;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-cell:hover {
-  background-color: rgba(0, 70, 67, 0.06);
-}
-
-.list-cell.selected {
-  background-color: rgba(0, 70, 67, 0.12);
-}
-
-.cell-image {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%; 
-  object-fit: cover;
-  margin-right: 10px;
   background-color: rgba(0, 70, 67, 0.15);
-  flex-shrink: 0;
-}
-
-.cell-name {
-  font-size: 0.85rem;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-cell:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.list-cell.selected {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-.cell-image {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%; 
-  object-fit: cover;
-  margin-right: 10px;
-  background-color: rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
 
@@ -255,8 +205,8 @@
 .club-sidebar {
   flex: 0 0 240px;
   width: 240px;
-  background-color: #eaf2f1; 
-  border-right: 1px solid rgba(0, 70, 67, 0.1);
+  background-color: var(--bg-sidebar); 
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
 }
@@ -266,14 +216,14 @@
   padding: 0 16px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid rgba(0, 70, 67, 0.1);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .club-header h2 {
   font-size: 1rem;
   font-weight: bold;
   margin: 0;
-  color: #004643;
+  color: var(--primary-dark);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -288,7 +238,7 @@
 .channels-title {
   font-size: 0.75rem;
   font-weight: bold;
-  color: rgba(0, 70, 67, 0.6);
+  color: var(--text-muted);
   margin-bottom: 8px;
   padding-left: 8px;
   letter-spacing: 0.5px;
@@ -304,7 +254,7 @@
 .channel-cell {
   padding: 6px 8px;
   border-radius: 4px;
-  color: #1a3331;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   cursor: pointer;
   display: flex;
@@ -313,12 +263,12 @@
 
 .channel-cell:hover {
   background-color: rgba(0, 70, 67, 0.06);
-  color: #004643;
+  color: var(--primary-dark);
 }
 
 .channel-cell.active {
   background-color: rgba(0, 70, 67, 0.12);
-  color: #004643;
+  color: var(--primary-dark);
   font-weight: 600;
 }
 
@@ -333,7 +283,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #ffffff; 
+  background-color: var(--bg-panel); 
   min-width: 0;
 }
 
@@ -343,7 +293,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(0, 70, 67, 0.1);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -352,7 +302,7 @@
   font-weight: 600;
   display: flex;
   align-items: center;
-  color: #004643;
+  color: var(--primary-dark);
 }
 
 .hash-icon {
@@ -364,7 +314,7 @@
 .members-toggle {
   background: transparent;
   border: none;
-  color: rgba(0, 70, 67, 0.5);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 6px;
   border-radius: 4px;
@@ -375,7 +325,7 @@
 }
 
 .members-toggle:hover, .members-toggle.active {
-  color: #004643;
+  color: var(--primary-dark);
   background-color: rgba(0, 70, 67, 0.08);
 }
 
@@ -388,8 +338,8 @@
 /* --- Members Sidebar (Inner Right) --- */
 .members-sidebar {
   width: 240px;
-  background-color: #f4f8f7;
-  border-left: 1px solid rgba(0, 70, 67, 0.1);
+  background-color: var(--bg-main);
+  border-left: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
 }
@@ -397,7 +347,7 @@
 .members-title {
   font-size: 0.75rem;
   font-weight: bold;
-  color: rgba(0, 70, 67, 0.6);
+  color: var(--text-muted);
   padding: 24px 16px 8px 16px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -433,7 +383,7 @@
 
 .member-name {
   font-size: 0.95rem;
-  color: #1a3331;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -443,6 +393,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 70, 67, 0.5);
+  color: var(--text-muted);
   font-weight: 500;
 }
