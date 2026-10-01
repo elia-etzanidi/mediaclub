@@ -30,7 +30,7 @@ mvn spring-boot:run
 The app starts on `http://localhost:8080`.
 
 H2 console (view your dev database in the browser): `http://localhost:8080/h2-console`
-- JDBC URL: `jdbc:h2:mem:mediaclub`
+- JDBC URL: `jdbc:h2:file:./data/mediaclub`
 - Username: `sa`
 - Password: (leave blank)
 

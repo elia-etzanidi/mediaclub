@@ -9,12 +9,21 @@ import {
   ClubView,
   DirectMessageView
 } from './components';
+import { getCurrentUser } from '../../services/authService';
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState('clubs');
   const [selectedItemId, setSelectedItemId] = useState(1);
   const [selectedChannelId, setSelectedChannelId] = useState(1);
   const [showMembers, setShowMembers] = useState(false);
+
+  const savedUser = getCurrentUser();
+  const user = savedUser ? {
+    username: savedUser.username,
+    email: savedUser.email || `${savedUser.username.toLowerCase()}@example.com`,
+    pfp: 'https://via.placeholder.com/40',
+    createdAt: currentUser.createdAt
+  } : currentUser;
 
   const clubs = initialClubs;
   const people = initialPeople;
@@ -43,7 +52,7 @@ const HomePage = () => {
   return (
     <div className="home-container">
       {/* Top Navigation Bar */}
-      <TopNav currentUser={currentUser} />
+      <TopNav currentUser={user} />
 
       {/* Main Content Area */}
       <main className="main-content">

@@ -1,25 +1,53 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import './LoginPage.css';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import './LoginPage.css'; 
 import logoImg from '../../assets/logo.png';
+import { registerUser } from '../../services/authService';
 
 function SignupPage() {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const location = useLocation();
+  const navigate = useNavigate();
   const isFromWelcome = location.state?.fromWelcome;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+    if (username.trim().length < 3) {
+      setError('Username must be at least 3 characters.');
       return;
     }
 
-    console.log('Signup data ready:', { email, password });
-    // TODO: Add backend connection here
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await registerUser({
+        username: username.trim(),
+        email: email.trim(),
+        password,
+      });
+      navigate('/home');
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,6 +62,21 @@ function SignupPage() {
           <p className="auth-description">Join the community and start sharing your thoughts.</p>
 
           <form onSubmit={handleSubmit} className="auth-form">
+            {error && <div className="auth-error">{error}</div>}
+
+            <div className="input-group">
+              <input
+                type="text"
+                placeholder="Username (min 3 chars)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="auth-input"
+                autoComplete="username"
+                minLength={3}
+                maxLength={30}
+                required
+              />
+            </div>
             <div className="input-group">
               <input
                 type="email"
@@ -41,16 +84,19 @@ function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="auth-input"
+                autoComplete="email"
                 required
               />
             </div>
             <div className="input-group">
               <input
                 type="password"
-                placeholder="Password"
+                placeholder="Password (min 8 chars)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="auth-input"
+                autoComplete="new-password"
+                minLength={8}
                 required
               />
             </div>
@@ -61,12 +107,17 @@ function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="auth-input"
+                autoComplete="new-password"
                 required
               />
             </div>
 
-            <button type="submit" className="btn btn-filled-dark auth-submit">
-              Sign Up
+            <button 
+              type="submit" 
+              className="btn btn-filled-dark auth-submit"
+              disabled={loading}
+            >
+              {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
           </form>
 

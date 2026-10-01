@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ProfilePopup.css';
+import { logoutUser } from '../../services/authService';
 
 const ProfilePopup = ({ user }) => {
   const [silenceNotifs, setSilenceNotifs] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/login');
+  };
 
   return (
     <div className="profile-popup">
@@ -31,6 +39,10 @@ const ProfilePopup = ({ user }) => {
             <span className="slider round"></span>
           </label>
         </div>
+
+        <button type="button" className="popup-logout-btn" onClick={handleLogout}>
+          Log Out
+        </button>
       </div>
     </div>
   );

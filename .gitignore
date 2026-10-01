@@ -4,6 +4,11 @@ backend/target/
 *.jar
 *.war
 
+# --- Database ---
+backend/data/
+*.mv.db
+*.trace.db
+
 # --- Frontend (Node/React) - for when that folder is added ---
 frontend/node_modules/
 frontend/dist/

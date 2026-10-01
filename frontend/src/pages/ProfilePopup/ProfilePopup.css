@@ -130,3 +130,21 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+.popup-logout-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 8px 12px;
+  background-color: transparent;
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  color: #c92a2a;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.popup-logout-btn:hover {
+  background-color: rgba(220, 53, 69, 0.08);
+}

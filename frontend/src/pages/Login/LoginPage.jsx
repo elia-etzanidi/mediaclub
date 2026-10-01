@@ -1,18 +1,32 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import logoImg from '../../assets/logo.png';
+import { loginUser } from '../../services/authService';
 
 function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const location = useLocation();
+  const navigate = useNavigate();
   const isFromWelcome = location.state?.fromWelcome;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login credentials ready:', { email, password });
-    // TODO: Add backend connection here
+    setError('');
+    setLoading(true);
+
+    try {
+      await loginUser({ username: identifier.trim(), password });
+      navigate('/home');
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,20 +36,23 @@ function LoginPage() {
       <div className={`auth-content ${isFromWelcome ? 'slide-in' : ''}`}>
 
         <div className={`auth-form-wrapper ${isFromWelcome ? 'fade-in' : ''}`}>
-          {/* NEW: Logo placed right above the title */}
+          {/* Logo placed right above the title */}
           <img src={logoImg} alt="App Logo" className="auth-hero-logo" />
 
           <h2 className="auth-title">Welcome Back</h2>
           <p className="auth-description">Log in to continue your discussions.</p>
 
           <form onSubmit={handleSubmit} className="auth-form">
+            {error && <div className="auth-error">{error}</div>}
+
             <div className="input-group">
               <input
-                type="email"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="Username or Email"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="auth-input"
+                autoComplete="username"
                 required
               />
             </div>
@@ -46,12 +63,17 @@ function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="auth-input"
+                autoComplete="current-password"
                 required
               />
             </div>
 
-            <button type="submit" className="btn btn-filled-dark auth-submit">
-              Log In
+            <button 
+              type="submit" 
+              className="btn btn-filled-dark auth-submit"
+              disabled={loading}
+            >
+              {loading ? 'Logging In...' : 'Log In'}
             </button>
           </form>
 

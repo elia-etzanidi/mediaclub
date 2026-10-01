@@ -42,7 +42,7 @@ public class AuthService {
         user = userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getId());
-        return new AuthResponse(token, user.getId(), user.getUsername());
+        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -55,9 +55,10 @@ public class AuthService {
         }
 
         User user = userRepository.findByUsername(request.getUsername())
+                .or(() -> userRepository.findByEmail(request.getUsername()))
                 .orElseThrow(() -> new BadRequestException("Invalid username or password"));
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getId());
-        return new AuthResponse(token, user.getId(), user.getUsername());
+        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail());
     }
 }
