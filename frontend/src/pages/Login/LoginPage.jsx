@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './LoginPage.css';
+import logoImg from '../../assets/logo.png';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,6 +22,9 @@ function LoginPage() {
       <div className={`auth-content ${isFromWelcome ? 'slide-in' : ''}`}>
         
         <div className={`auth-form-wrapper ${isFromWelcome ? 'fade-in' : ''}`}>
+          {/* NEW: Logo placed right above the title */}
+          <img src={logoImg} alt="App Logo" className="auth-hero-logo" />
+          
           <h2 className="auth-title">Welcome Back</h2>
           <p className="auth-description">Log in to continue your discussions.</p>
           

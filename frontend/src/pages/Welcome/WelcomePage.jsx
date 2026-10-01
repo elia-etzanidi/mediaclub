@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './WelcomePage.css';
+import logoImg from '../../assets/logo.png'; 
 
 function WelcomePage() {
   return (
@@ -9,6 +10,9 @@ function WelcomePage() {
 
       {/* Right-aligned content block */}
       <div className="welcome-content">
+        
+        <img src={logoImg} alt="App Logo" className="welcome-hero-logo" />
+        
         <h1 className="welcome-title">
           Join discussions on your favorite media
         </h1>
@@ -25,13 +29,13 @@ function WelcomePage() {
 
         <div className="welcome-tags">
           <span className="tag">
-            <span className="tag-icon">👥</span> 16,000+ active members
+            <span className="tag-icon">✧</span> 16,000+ active members
           </span>
           <span className="tag">
-            <span className="tag-icon">📚</span> 500+ active clubs
+            <span className="tag-icon">✧</span> 500+ active clubs
           </span>
           <span className="tag">
-            <span className="tag-icon">💬</span> Daily discussions
+            <span className="tag-icon">✧</span> Daily discussions
           </span>
         </div>
       </div>

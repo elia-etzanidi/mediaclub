@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './LoginPage.css'; 
+import logoImg from '../../assets/logo.png';
 
 function SignupPage() {
   const [email, setEmail] = useState('');
@@ -25,7 +26,10 @@ function SignupPage() {
     <div className="auth-container papercut-theme">
       <div className="auth-spacer"></div>
       <div className={`auth-content ${isFromWelcome ? 'slide-in' : ''}`}>
+        
         <div className={`auth-form-wrapper ${isFromWelcome ? 'fade-in' : ''}`}>
+          <img src={logoImg} alt="App Logo" className="auth-hero-logo" />
+
           <h2 className="auth-title">Create an Account</h2>
           <p className="auth-description">Join the community and start sharing your thoughts.</p>
           

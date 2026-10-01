@@ -34,9 +34,20 @@
 
 .auth-title {
   color: var(--primary-dark);
+  font-family: var(--font-heading);
   font-size: 2.5rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
+}
+
+.auth-hero-logo {
+  height: 100px;
+  width: auto;
+  object-fit: contain;
+  object-position: left center;
+  display: block;
+  margin-bottom: 0.25rem;
+  margin-left: -25px;
 }
 
 .auth-description {
