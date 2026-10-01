@@ -13,20 +13,20 @@ const ProfilePopup = ({ user }) => {
           <span className="popup-email">{user.email}</span>
         </div>
       </div>
-      
+
       <div className="popup-body">
         <div className="popup-detail">
           <span className="detail-label">Account created:</span>
           <span className="detail-value">{user.createdAt}</span>
         </div>
-        
+
         <div className="popup-action">
           <span className="action-label">Silence Notifications</span>
           <label className="switch">
-            <input 
-              type="checkbox" 
-              checked={silenceNotifs} 
-              onChange={() => setSilenceNotifs(!silenceNotifs)} 
+            <input
+              type="checkbox"
+              checked={silenceNotifs}
+              onChange={() => setSilenceNotifs(!silenceNotifs)}
             />
             <span className="slider round"></span>
           </label>

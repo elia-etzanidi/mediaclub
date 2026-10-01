@@ -20,36 +20,36 @@ function LoginPage() {
       <div className="auth-spacer"></div>
 
       <div className={`auth-content ${isFromWelcome ? 'slide-in' : ''}`}>
-        
+
         <div className={`auth-form-wrapper ${isFromWelcome ? 'fade-in' : ''}`}>
           {/* NEW: Logo placed right above the title */}
           <img src={logoImg} alt="App Logo" className="auth-hero-logo" />
-          
+
           <h2 className="auth-title">Welcome Back</h2>
           <p className="auth-description">Log in to continue your discussions.</p>
-          
+
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="input-group">
-              <input 
-                type="email" 
-                placeholder="Email Address" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="auth-input"
-                required 
+                required
               />
             </div>
             <div className="input-group">
-              <input 
-                type="password" 
-                placeholder="Password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="auth-input"
-                required 
+                required
               />
             </div>
-            
+
             <button type="submit" className="btn btn-filled-dark auth-submit">
               Log In
             </button>

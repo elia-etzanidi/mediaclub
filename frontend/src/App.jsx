@@ -16,7 +16,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/home" element={<HomePage />} />
-        
+
         {/* Catch-all route: redirects unknown URLs back to the landing page */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

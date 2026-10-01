@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import './HomePage.css';
-import { 
-  currentUser, 
-  initialClubs, 
+import {
+  currentUser,
+  initialClubs,
   initialPeople,
-  TopNav, 
-  LeftPane, 
-  ClubView, 
-  DirectMessageView 
+  TopNav,
+  LeftPane,
+  ClubView,
+  DirectMessageView
 } from './components';
 
 const HomePage = () => {
@@ -48,7 +48,7 @@ const HomePage = () => {
       {/* Main Content Area */}
       <main className="main-content">
         {/* Left Component */}
-        <LeftPane 
+        <LeftPane
           activeTab={activeTab}
           onTabChange={handleTabChange}
           items={displayList}
@@ -59,7 +59,7 @@ const HomePage = () => {
         {/* Right Component */}
         <section className="right-pane">
           {activeTab === 'clubs' && activeItem && (
-            <ClubView 
+            <ClubView
               club={activeItem}
               selectedChannelId={selectedChannelId}
               onSelectChannel={setSelectedChannelId}

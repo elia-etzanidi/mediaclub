@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './LoginPage.css'; 
+import './LoginPage.css';
 import logoImg from '../../assets/logo.png';
 
 function SignupPage() {
@@ -12,12 +12,12 @@ function SignupPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
-    
+
     console.log('Signup data ready:', { email, password });
     // TODO: Add backend connection here
   };
@@ -26,45 +26,45 @@ function SignupPage() {
     <div className="auth-container papercut-theme">
       <div className="auth-spacer"></div>
       <div className={`auth-content ${isFromWelcome ? 'slide-in' : ''}`}>
-        
+
         <div className={`auth-form-wrapper ${isFromWelcome ? 'fade-in' : ''}`}>
           <img src={logoImg} alt="App Logo" className="auth-hero-logo" />
 
           <h2 className="auth-title">Create an Account</h2>
           <p className="auth-description">Join the community and start sharing your thoughts.</p>
-          
+
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="input-group">
-              <input 
-                type="email" 
-                placeholder="Email Address" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="auth-input"
-                required 
+                required
               />
             </div>
             <div className="input-group">
-              <input 
-                type="password" 
-                placeholder="Password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="auth-input"
-                required 
+                required
               />
             </div>
             <div className="input-group">
-              <input 
-                type="password" 
-                placeholder="Confirm Password" 
-                value={confirmPassword} 
-                onChange={(e) => setConfirmPassword(e.target.value)} 
+              <input
+                type="password"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="auth-input"
-                required 
+                required
               />
             </div>
-            
+
             <button type="submit" className="btn btn-filled-dark auth-submit">
               Sign Up
             </button>

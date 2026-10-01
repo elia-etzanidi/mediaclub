@@ -4,14 +4,14 @@ const LeftPane = ({ activeTab, onTabChange, items, selectedItemId, onSelectItem 
   return (
     <aside className="left-pane">
       <div className="list-header">
-        <button 
-          className={`tab-button ${activeTab === 'clubs' ? 'active' : ''}`} 
+        <button
+          className={`tab-button ${activeTab === 'clubs' ? 'active' : ''}`}
           onClick={() => onTabChange('clubs')}
         >
           Clubs
         </button>
-        <button 
-          className={`tab-button ${activeTab === 'people' ? 'active' : ''}`} 
+        <button
+          className={`tab-button ${activeTab === 'people' ? 'active' : ''}`}
           onClick={() => onTabChange('people')}
         >
           People
@@ -20,9 +20,9 @@ const LeftPane = ({ activeTab, onTabChange, items, selectedItemId, onSelectItem 
 
       <div className="scrollable-list">
         {items.map((item) => (
-          <div 
-            key={item.id} 
-            className={`list-cell ${selectedItemId === item.id ? 'selected' : ''}`} 
+          <div
+            key={item.id}
+            className={`list-cell ${selectedItemId === item.id ? 'selected' : ''}`}
             onClick={() => onSelectItem(item)}
           >
             <img src={item.img} alt={item.name} className="cell-image" />

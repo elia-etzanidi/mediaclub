@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './WelcomePage.css';
-import logoImg from '../../assets/logo.png'; 
+import logoImg from '../../assets/logo.png';
 
 function WelcomePage() {
   return (
@@ -10,15 +10,15 @@ function WelcomePage() {
 
       {/* Right-aligned content block */}
       <div className="welcome-content">
-        
+
         <img src={logoImg} alt="App Logo" className="welcome-hero-logo" />
-        
+
         <h1 className="welcome-title">
           Join discussions on your favorite media
         </h1>
-        
+
         <p className="welcome-description">
-          Discover like-minded people through vibrant communities and exclusive clubs. 
+          Discover like-minded people through vibrant communities and exclusive clubs.
           Dive deeper into the books, movies, and shows you love and never watch alone again.
         </p>
 

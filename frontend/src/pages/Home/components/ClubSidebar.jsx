@@ -10,8 +10,8 @@ const ClubSidebar = ({ clubName, channels, selectedChannelId, onSelectChannel })
         <div className="channels-title">CHANNELS</div>
         <div className="channel-list">
           {channels.map((channel) => (
-            <div 
-              key={channel.id} 
+            <div
+              key={channel.id}
               className={`channel-cell ${selectedChannelId === channel.id ? 'active' : ''}`}
               onClick={() => onSelectChannel(channel.id)}
             >
