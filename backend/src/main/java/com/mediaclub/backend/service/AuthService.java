@@ -35,6 +35,7 @@ public class AuthService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .avatarUrl("/default-avatar.png")
                 .isGlobalAdmin(false)
                 .status(User.UserStatus.OFFLINE)
                 .build();
@@ -42,7 +43,7 @@ public class AuthService {
         user = userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getId());
-        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail());
+        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getAvatarUrl());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -59,6 +60,6 @@ public class AuthService {
                 .orElseThrow(() -> new BadRequestException("Invalid username or password"));
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getId());
-        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail());
+        return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getAvatarUrl());
     }
 }

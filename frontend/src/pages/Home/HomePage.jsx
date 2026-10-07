@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './HomePage.css';
 import {
   currentUser,
@@ -9,7 +9,8 @@ import {
   ClubView,
   DirectMessageView
 } from './components';
-import { getCurrentUser } from '../../services/authService';
+import { getCurrentUser, getUserProfile } from '../../services/authService';
+import defaultAvatar from '../../assets/default-avatar.png';
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState('clubs');
@@ -17,13 +18,35 @@ const HomePage = () => {
   const [selectedChannelId, setSelectedChannelId] = useState(1);
   const [showMembers, setShowMembers] = useState(false);
 
-  const savedUser = getCurrentUser();
-  const user = savedUser ? {
-    username: savedUser.username,
-    email: savedUser.email || `${savedUser.username.toLowerCase()}@example.com`,
-    pfp: 'https://via.placeholder.com/40',
-    createdAt: currentUser.createdAt
-  } : currentUser;
+  const [user, setUser] = useState(() => {
+    const savedUser = getCurrentUser();
+    return savedUser ? {
+      ...savedUser,
+      username: savedUser.username,
+      email: savedUser.email || `${savedUser.username.toLowerCase()}@example.com`,
+      pfp: savedUser.pfp || savedUser.avatarUrl || defaultAvatar,
+      createdAt: savedUser.createdAt || currentUser.createdAt
+    } : {
+      ...currentUser,
+      pfp: currentUser.pfp || defaultAvatar
+    };
+  });
+
+  useEffect(() => {
+    getUserProfile().then((profile) => {
+      if (profile) {
+        setUser((prev) => ({
+          ...prev,
+          ...profile,
+          pfp: profile.avatarUrl || profile.pfp || defaultAvatar,
+        }));
+      }
+    });
+  }, []);
+
+  const handleUpdateUser = (updatedFields) => {
+    setUser((prev) => ({ ...prev, ...updatedFields }));
+  };
 
   const clubs = initialClubs;
   const people = initialPeople;
@@ -52,7 +75,7 @@ const HomePage = () => {
   return (
     <div className="home-container">
       {/* Top Navigation Bar */}
-      <TopNav currentUser={user} />
+      <TopNav currentUser={user} onUpdateUser={handleUpdateUser} />
 
       {/* Main Content Area */}
       <main className="main-content">

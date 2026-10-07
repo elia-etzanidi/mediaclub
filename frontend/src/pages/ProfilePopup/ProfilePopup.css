@@ -4,53 +4,183 @@
   position: absolute;
   top: 55px; 
   right: 20px;
-  width: 300px;
+  width: 310px;
   background-color: var(--bg-panel);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px var(--shadow-color); 
+  border-radius: 12px;
+  box-shadow: 0 12px 32px var(--shadow-color); 
   color: var(--text-main); 
   font-family: var(--font-body);
   z-index: 1000;
   overflow: hidden;
-  border: 1px solid var(--border-subtle); 
+  border: 1px solid var(--border-subtle);
+  animation: popupSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popupSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .popup-header {
+  position: relative;
   display: flex;
   align-items: center;
   padding: 20px;
   background-color: var(--primary-dark); 
-  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.popup-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.popup-close-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Avatar Wrapper & Hover Action */
+.popup-avatar-container {
+  position: relative;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.popup-avatar-wrapper {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--primary-dark);
+}
+
+.popup-avatar-wrapper:hover,
+.popup-avatar-wrapper:focus-visible {
+  transform: scale(1.04);
+  border-color: #ffffff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  outline: none;
 }
 
 .popup-pfp-large {
-  width: 60px;
-  height: 60px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  margin-right: 15px;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.2); 
+  display: block;
+}
+
+.avatar-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 30, 28, 0.7);
+  backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.popup-avatar-wrapper:hover .avatar-hover-overlay,
+.popup-avatar-wrapper:focus-visible .avatar-hover-overlay {
+  opacity: 1;
+}
+
+.pencil-icon,
+.camera-icon {
+  width: 18px;
+  height: 18px;
+  margin-bottom: 2px;
 }
 
 .popup-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .popup-username {
-  font-size: 1.2rem;
-  font-weight: bold;
+  font-size: 1.15rem;
+  font-weight: 700;
   color: var(--text-inverse); 
-  margin-bottom: 4px;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .popup-email {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7); 
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Feedback Alert */
+.popup-alert {
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid transparent;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.alert-success {
+  background-color: #e6f7f2;
+  color: #0b7255;
+  border-color: #b7e8d8;
+}
+
+.alert-error {
+  background-color: #fde8e8;
+  color: #c92a2a;
+  border-color: #f8b4b4;
+}
+
+/* Popup Body */
 .popup-body {
-  padding: 16px 20px;
+  padding: 18px 20px;
   background-color: var(--bg-panel);
 }
 
@@ -58,8 +188,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  font-size: 0.9rem;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
 }
 
 .detail-label {
@@ -76,7 +206,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--primary-dark); 
 }

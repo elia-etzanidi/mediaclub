@@ -1,7 +1,9 @@
+import defaultAvatar from '../../../assets/default-avatar.png';
+
 export const currentUser = {
   username: 'DemoUser',
   email: 'demouser@example.com',
-  pfp: 'https://via.placeholder.com/40',
+  pfp: defaultAvatar,
   createdAt: 'October 15, 2023'
 };
 

@@ -34,7 +34,9 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    private String avatarUrl;
+    @Column(columnDefinition = "TEXT")
+    @Builder.Default
+    private String avatarUrl = "/default-avatar.png";
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -59,6 +61,9 @@ public class User {
         this.createdAt = Instant.now();
         if (this.status == null) {
             this.status = UserStatus.OFFLINE;
+        }
+        if (this.avatarUrl == null || this.avatarUrl.isBlank()) {
+            this.avatarUrl = "/default-avatar.png";
         }
     }
 
