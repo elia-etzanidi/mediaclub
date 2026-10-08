@@ -9,4 +9,5 @@ export { default as MembersSidebar } from './MembersSidebar';
 export { default as DirectMessageView } from './DirectMessageView';
 export { default as EmptyClubsView } from './EmptyClubsView';
 export { default as CreateClubModal } from './CreateClubModal';
+export { default as ClubInfoView } from './ClubInfoView';
 export * from './mockData';

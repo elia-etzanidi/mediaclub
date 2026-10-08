@@ -89,7 +89,7 @@ const CreateClubModal = ({ item, onConfirm, onClose }) => {
 
           {/* Channels Note */}
           <p className="create-club-channels-note">
-            Standard channels (<strong>#general</strong>, <strong>#spoilers</strong>, <strong>#reviews</strong>, and <strong>#requests</strong>) will be automatically created so members can jump right in.
+            The official information board (<strong>#info</strong>) and standard discussion channels (<strong>#general</strong>, <strong>#spoilers</strong>, <strong>#reviews</strong>, and <strong>#requests</strong>) will be automatically created so members can jump right in.
           </p>
         </div>
 

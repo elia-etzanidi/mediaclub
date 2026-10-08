@@ -17,7 +17,7 @@ import defaultAvatar from '../../assets/default-avatar.png';
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState('clubs');
   const [selectedItemId, setSelectedItemId] = useState(null);
-  const [selectedChannelId, setSelectedChannelId] = useState(1);
+  const [selectedChannelId, setSelectedChannelId] = useState('info');
   const [showMembers, setShowMembers] = useState(true);
 
   // Clubs state: defaults to empty so new users or users with 0 clubs see the empty state prompt
@@ -117,11 +117,14 @@ const HomePage = () => {
         name: item.title,
         mediaType: item.type || 'movies',
         img: item.photo,
+        year: item.year,
+        genre: item.genre,
         channels: [
-          { id: 1, name: 'general' },
-          { id: 2, name: 'spoilers' },
-          { id: 3, name: 'reviews' },
-          { id: 4, name: 'requests' }
+          { id: 'info', name: 'info', type: 'info' },
+          { id: 1, name: 'general', type: 'text' },
+          { id: 2, name: 'spoilers', type: 'text' },
+          { id: 3, name: 'reviews', type: 'text' },
+          { id: 4, name: 'requests', type: 'text' }
         ],
         members: [{ id: user.id || 1, name: user.username, img: user.pfp, role: 'moderator' }]
       };
@@ -188,11 +191,14 @@ const HomePage = () => {
       name: item.title, // Predetermined by the media API title
       mediaType: item.type || 'movies',
       img: item.photo,
+      year: item.year,
+      genre: item.genre,
       channels: [
-        { id: 1, name: 'general' },
-        { id: 2, name: 'spoilers' },
-        { id: 3, name: 'reviews' },
-        { id: 4, name: 'requests' }
+        { id: 'info', name: 'info', type: 'info' },
+        { id: 1, name: 'general', type: 'text' },
+        { id: 2, name: 'spoilers', type: 'text' },
+        { id: 3, name: 'reviews', type: 'text' },
+        { id: 4, name: 'requests', type: 'text' }
       ],
       members: [
         { id: user.id || 1, name: user.username, img: user.pfp, role: 'moderator' }

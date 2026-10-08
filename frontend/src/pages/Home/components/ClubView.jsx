@@ -1,6 +1,7 @@
 import React from 'react';
 import ClubSidebar from './ClubSidebar';
 import ChatArea from './ChatArea';
+import ClubInfoView from './ClubInfoView';
 import MembersSidebar from './MembersSidebar';
 
 const ClubView = ({
@@ -11,6 +12,10 @@ const ClubView = ({
   onToggleMembers
 }) => {
   const activeChannel = club.channels?.find((c) => c.id === selectedChannelId) || club.channels?.[0];
+  const isInfoChannel =
+    activeChannel?.type === 'info' ||
+    activeChannel?.name === 'info' ||
+    activeChannel?.id === 'info';
 
   return (
     <div className="club-view">
@@ -21,9 +26,17 @@ const ClubView = ({
         onSelectChannel={onSelectChannel}
       />
 
-      <ChatArea
-        activeChannel={activeChannel}
-      />
+      {isInfoChannel ? (
+        <ClubInfoView
+          club={club}
+          activeChannel={activeChannel}
+          onSelectChannel={onSelectChannel}
+        />
+      ) : (
+        <ChatArea
+          activeChannel={activeChannel}
+        />
+      )}
 
       {showMembers ? (
         <MembersSidebar
