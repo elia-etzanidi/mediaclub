@@ -4,7 +4,21 @@ import ProfilePopup from '../../ProfilePopup/ProfilePopup';
 import logoImg from '../../../assets/logo.png';
 import defaultAvatar from '../../../assets/default-avatar.png';
 
-const TopNav = ({ currentUser, onUpdateUser }) => {
+const TopNav = ({
+  currentUser,
+  onUpdateUser,
+  searchQuery,
+  onSearchChange,
+  searchFilter,
+  onFilterChange,
+  searchInputRef,
+  isSearchHighlighted,
+  onJoinClub,
+  onCreateClub,
+  joinedClubTitles = [],
+  existingClubTitles = [],
+  joinedClubNames
+}) => {
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const navRightRef = useRef(null);
 
@@ -31,7 +45,19 @@ const TopNav = ({ currentUser, onUpdateUser }) => {
       </div>
 
       <div className="nav-middle">
-        <SearchBar />
+        <SearchBar
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          searchFilter={searchFilter}
+          onFilterChange={onFilterChange}
+          searchInputRef={searchInputRef}
+          isHighlighted={isSearchHighlighted}
+          onJoinClub={onJoinClub}
+          onCreateClub={onCreateClub}
+          joinedClubTitles={joinedClubTitles}
+          existingClubTitles={existingClubTitles}
+          joinedClubNames={joinedClubNames}
+        />
       </div>
 
       <div className="nav-right" style={{ position: 'relative' }} ref={navRightRef}>

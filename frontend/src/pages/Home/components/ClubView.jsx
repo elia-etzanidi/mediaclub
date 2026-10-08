@@ -7,7 +7,7 @@ const ClubView = ({
   club,
   selectedChannelId,
   onSelectChannel,
-  showMembers,
+  showMembers = true,
   onToggleMembers
 }) => {
   const activeChannel = club.channels?.find((c) => c.id === selectedChannelId) || club.channels?.[0];
@@ -23,12 +23,24 @@ const ClubView = ({
 
       <ChatArea
         activeChannel={activeChannel}
-        showMembers={showMembers}
-        onToggleMembers={onToggleMembers}
       />
 
-      {showMembers && (
-        <MembersSidebar members={club.members || []} />
+      {showMembers ? (
+        <MembersSidebar
+          members={club.members || []}
+          onClose={onToggleMembers}
+        />
+      ) : (
+        <button
+          type="button"
+          className="members-collapsed-tab"
+          onClick={onToggleMembers}
+          title="Open members list"
+          aria-label="Open members list"
+        >
+          <span className="collapsed-tab-icon">𖤝</span>
+          <span className="collapsed-tab-label">Members</span>
+        </button>
       )}
     </div>
   );

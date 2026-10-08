@@ -10,17 +10,27 @@ export const currentUser = {
 export const initialClubs = [
   { 
     id: 1, 
-    name: 'General Chat', 
-    img: 'https://via.placeholder.com/50', 
-    channels: [{ id: 1, name: 'welcome' }, { id: 2, name: 'general' }], 
-    members: [{ id: 1, name: 'Alice Smith', img: 'https://via.placeholder.com/32' }] 
+    name: 'Inception', 
+    mediaType: 'movies',
+    img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23004643'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EINC%3C/text%3E%3C/svg%3E", 
+    channels: [{ id: 1, name: 'general' }, { id: 2, name: 'spoilers' }, { id: 3, name: 'theories' }, { id: 4, name: 'reviews' }], 
+    members: [
+      { id: 1, name: 'Alice Smith', img: defaultAvatar, role: 'moderator' },
+      { id: 2, name: 'Bob Jones', img: defaultAvatar, role: 'member' },
+      { id: 3, name: 'Charlie Day', img: defaultAvatar, role: 'member' }
+    ] 
   },
   { 
     id: 2, 
-    name: 'Gaming Lounge', 
-    img: 'https://via.placeholder.com/50', 
-    channels: [{ id: 4, name: 'lfg' }], 
-    members: [{ id: 4, name: 'Diana Prince', img: 'https://via.placeholder.com/32' }] 
+    name: 'Breaking Bad', 
+    mediaType: 'tv',
+    img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23357979'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EBB%3C/text%3E%3C/svg%3E", 
+    channels: [{ id: 1, name: 'general' }, { id: 2, name: 'spoilers' }, { id: 3, name: 'episodes' }], 
+    members: [
+      { id: 4, name: 'Diana Prince', img: defaultAvatar, role: 'moderator' },
+      { id: 5, name: 'Evan Wright', img: defaultAvatar, role: 'member' },
+      { id: 6, name: 'Fiona Gallagher', img: defaultAvatar, role: 'member' }
+    ] 
   }
 ];
 
@@ -29,7 +39,52 @@ export const initialPeople = [
 ];
 
 export const mockSearchResults = [
-  { id: 1, type: 'movies', title: 'Inception', genre: 'Sci-Fi', year: '2010', photo: 'https://via.placeholder.com/40x56/004643/FFFFFF?text=M' },
-  { id: 2, type: 'tv', title: 'Breaking Bad', genre: 'Drama', year: '2008', photo: 'https://via.placeholder.com/40x56/357979/FFFFFF?text=TV' },
-  { id: 3, type: 'books', title: 'Dune', genre: 'Sci-Fi', year: '1965', photo: 'https://via.placeholder.com/40x56/91a1a4/FFFFFF?text=B' },
+  {
+    id: 1,
+    type: 'movies',
+    title: 'Inception',
+    genre: 'Sci-Fi / Action',
+    year: '2010',
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23004643'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EINC%3C/text%3E%3C/svg%3E"
+  },
+  {
+    id: 2,
+    type: 'tv',
+    title: 'Breaking Bad',
+    genre: 'Crime / Drama',
+    year: '2008',
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23357979'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EBB%3C/text%3E%3C/svg%3E"
+  },
+  {
+    id: 3,
+    type: 'books',
+    title: 'Dune',
+    genre: 'Sci-Fi',
+    year: '1965',
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23d97706'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3ED%3C/text%3E%3C/svg%3E"
+  },
+  {
+    id: 4,
+    type: 'movies',
+    title: 'Interstellar',
+    genre: 'Sci-Fi / Adventure',
+    year: '2014',
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23112625'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EINT%3C/text%3E%3C/svg%3E"
+  },
+  {
+    id: 5,
+    type: 'tv',
+    title: 'Stranger Things',
+    genre: 'Sci-Fi / Drama',
+    year: '2016',
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23991b1b'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EST%3C/text%3E%3C/svg%3E"
+  },
+  {
+    id: 6,
+    type: 'books',
+    title: 'The Hobbit',
+    genre: 'High Fantasy',
+    year: '1937',
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%2315803d'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3ETH%3C/text%3E%3C/svg%3E"
+  }
 ];

@@ -7,4 +7,6 @@ export { default as ClubSidebar } from './ClubSidebar';
 export { default as ChatArea } from './ChatArea';
 export { default as MembersSidebar } from './MembersSidebar';
 export { default as DirectMessageView } from './DirectMessageView';
+export { default as EmptyClubsView } from './EmptyClubsView';
+export { default as CreateClubModal } from './CreateClubModal';
 export * from './mockData';
