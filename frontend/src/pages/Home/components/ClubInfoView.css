@@ -118,17 +118,6 @@
   overflow: hidden;
 }
 
-.info-hero-backdrop-glow {
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 240px;
-  height: 240px;
-  background: radial-gradient(circle, rgba(186, 211, 206, 0.45) 0%, transparent 70%);
-  pointer-events: none;
-  filter: blur(20px);
-}
-
 .info-hero-content {
   position: relative;
   display: flex;
@@ -186,33 +175,6 @@
   gap: 10px;
 }
 
-.info-hero-header-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.info-official-tag {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--primary-dark);
-  background-color: rgba(0, 70, 67, 0.1);
-  padding: 3px 8px;
-  border-radius: 4px;
-}
-
-.info-status-pill {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 2px 8px;
-  border-radius: 10px;
-  border: 1px solid var(--border-subtle);
-}
 
 .info-hero-title {
   font-family: var(--font-heading);
@@ -422,13 +384,6 @@
   color: var(--text-main);
 }
 
-.highlight-mod {
-  color: var(--primary-dark);
-}
-
-.highlight-status {
-  color: var(--primary-medium);
-}
 
 /* Cast Chips */
 .info-cast-chips {
@@ -515,32 +470,27 @@
   margin: 0;
 }
 
-/* Guidelines Callout Box */
-.info-guidelines-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background-color: #fbfbf7;
-  border: 1px solid rgba(217, 119, 6, 0.25);
-  border-left: 4px solid #d97706;
-  border-radius: 6px;
-  font-size: 0.83rem;
+/* Spoiler Guidelines (Secondary Text) */
+.info-spoiler-guidelines {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 2px 0 0 0;
+}
+
+.info-spoiler-guidelines strong {
   color: var(--text-secondary);
-  line-height: 1.45;
+  font-weight: 600;
 }
 
-.info-guidelines-icon {
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-.info-guidelines-content code {
-  font-size: 0.78rem;
-  background-color: rgba(217, 119, 6, 0.12);
-  color: #92400e;
-  padding: 1px 4px;
-  border-radius: 3px;
+.info-spoiler-guidelines code {
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  background-color: rgba(0, 70, 67, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
 /* Footer CTA */

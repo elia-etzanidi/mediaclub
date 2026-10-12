@@ -115,10 +115,19 @@ const HomePage = () => {
       targetClub = {
         id: Date.now(),
         name: item.title,
-        mediaType: item.type || 'movies',
-        img: item.photo,
+        mediaType: item.type || item.mediaType || 'movies',
+        externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
+        externalId: item.externalId || String(item.id),
+        img: item.photo || item.coverLarge || item.img,
+        backdrop: item.backdrop || null,
         year: item.year,
         genre: item.genre,
+        author: item.author,
+        pages: item.pages || null,
+        publisher: item.publisher || null,
+        firstSentence: item.firstSentence || null,
+        audience: item.audience || null,
+        rating: item.rating || null,
         channels: [
           { id: 'info', name: 'info', type: 'info' },
           { id: 1, name: 'general', type: 'text' },
@@ -126,7 +135,8 @@ const HomePage = () => {
           { id: 3, name: 'reviews', type: 'text' },
           { id: 4, name: 'requests', type: 'text' }
         ],
-        members: [{ id: user.id || 1, name: user.username, img: user.pfp, role: 'moderator' }]
+        members: [{ id: user.id || 1, name: user.username, img: user.pfp, role: 'moderator' }],
+        mediaDetails: item.mediaDetails || null
       };
       setSystemClubs((prev) => [...prev, targetClub]);
     } else {
@@ -189,10 +199,19 @@ const HomePage = () => {
     const newClub = {
       id: Date.now(),
       name: item.title, // Predetermined by the media API title
-      mediaType: item.type || 'movies',
-      img: item.photo,
+      mediaType: item.type || item.mediaType || 'movies',
+      externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
+      externalId: item.externalId || String(item.id),
+      img: item.photo || item.coverLarge || item.img,
+      backdrop: item.backdrop || null,
       year: item.year,
       genre: item.genre,
+      author: item.author,
+      pages: item.pages || null,
+      publisher: item.publisher || null,
+      firstSentence: item.firstSentence || null,
+      audience: item.audience || null,
+      rating: item.rating || null,
       channels: [
         { id: 'info', name: 'info', type: 'info' },
         { id: 1, name: 'general', type: 'text' },
@@ -202,7 +221,8 @@ const HomePage = () => {
       ],
       members: [
         { id: user.id || 1, name: user.username, img: user.pfp, role: 'moderator' }
-      ]
+      ],
+      mediaDetails: item.mediaDetails || null
     };
 
     setSystemClubs((prev) => [...prev, newClub]);

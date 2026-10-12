@@ -48,11 +48,22 @@ const CreateClubModal = ({ item, onConfirm, onClose }) => {
         <div className="create-club-modal-body">
           {/* Target Media Preview */}
           <div className="create-club-media-preview">
-            <img src={item.photo} alt={item.title} className="create-club-media-photo" />
+            <img
+              src={item.photo}
+              alt={item.title}
+              className="create-club-media-photo"
+              onError={(e) => {
+                e.target.onerror = null;
+                const initial = item.title ? item.title.slice(0, 3).toUpperCase() : 'MED';
+                const bgColor = item.type === 'books' ? '%23d97706' : item.type === 'tv' ? '%23357979' : '%23004643';
+                e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='${bgColor}'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='12' text-anchor='middle'%3E${encodeURIComponent(initial)}%3C/text%3E%3C/svg%3E`;
+              }}
+            />
             <div className="create-club-media-info">
               <span className="create-club-media-title">{item.title}</span>
               <div className="create-club-media-meta">
                 <span className="create-club-media-badge">{typeLabel}</span>
+                {item.author && <span>by {item.author} •</span>}
                 <span>{item.genre}</span>
                 {item.year && <span>• {item.year}</span>}
               </div>

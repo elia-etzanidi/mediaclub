@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SearchPopup from './SearchPopup';
-import { mockSearchResults } from './mockData';
+import { searchMedia } from '../../../services/mediaService';
 
 const SearchBar = ({
   searchQuery,
@@ -20,6 +20,11 @@ const SearchBar = ({
   const [internalFilter, setInternalFilter] = useState('movies');
   const [isDismissed, setIsDismissed] = useState(false);
   const containerRef = useRef(null);
+
+  // Search Results state from TMDB & Open Library
+  const [results, setResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLiveApi, setIsLiveApi] = useState(false);
 
   const query = searchQuery !== undefined ? searchQuery : internalQuery;
   const filter = searchFilter !== undefined ? searchFilter : internalFilter;
@@ -41,14 +46,40 @@ const SearchBar = ({
     }
   };
 
-  const filteredResults = mockSearchResults.filter((item) =>
-    item.type === filter && item.title.toLowerCase().includes(query.toLowerCase())
-  );
+  // Debounced live API search
+  useEffect(() => {
+    if (!query || !query.trim()) {
+      setResults([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchMedia(query, filter, controller.signal);
+        setResults(res.results || []);
+        setIsLiveApi(res.isLiveApi || false);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.warn('Search error:', err);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }, 260);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, filter]);
 
   // Click outside listener to dismiss popup
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Do not dismiss search if interacting with modal overlays or dialogs
       if (
         event.target.closest &&
         (event.target.closest('.create-club-modal-overlay') || event.target.closest('[role="dialog"]'))
@@ -101,12 +132,14 @@ const SearchBar = ({
         <SearchPopup
           filter={filter}
           onFilterChange={handleFilterChange}
-          results={filteredResults}
+          results={results}
           query={query}
           onJoinClub={onJoinClub}
           onCreateClub={onCreateClub}
           joinedClubTitles={effectiveJoined}
           existingClubTitles={existingClubTitles}
+          isLoading={isLoading}
+          isLiveApi={isLiveApi}
         />
       )}
     </div>
