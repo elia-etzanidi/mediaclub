@@ -73,7 +73,7 @@ const ClubInfoView = ({ club, activeChannel, onSelectChannel }) => {
       {/* Top Bar Navigation (Matches ChatArea Top Nav) */}
       <div className="info-top-nav">
         <div className="info-nav-left">
-          <span className="info-nav-icon">ⓘ</span>
+          <span className="info-nav-icon">✦</span>
           <span className="info-nav-name">{activeChannel?.name || 'info'}</span>
           <span className="info-nav-divider">|</span>
           <span className="info-nav-subtext">Club Overview & Details</span>
@@ -277,7 +277,7 @@ const ClubInfoView = ({ club, activeChannel, onSelectChannel }) => {
             <div className="info-channels-grid">
               <div className="info-channel-card active-card">
                 <div className="info-channel-header">
-                  <span className="info-channel-name">ⓘ info</span>
+                  <span className="info-channel-name">✦ info</span>
                   <span className="info-channel-badge">Information</span>
                 </div>
                 <p className="info-channel-desc">

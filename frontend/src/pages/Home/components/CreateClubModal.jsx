@@ -62,10 +62,20 @@ const CreateClubModal = ({ item, onConfirm, onClose }) => {
             <div className="create-club-media-info">
               <span className="create-club-media-title">{item.title}</span>
               <div className="create-club-media-meta">
-                <span className="create-club-media-badge">{typeLabel}</span>
-                {item.author && <span>by {item.author} •</span>}
-                <span>{item.genre}</span>
-                {item.year && <span>• {item.year}</span>}
+                <div className="create-club-media-badge-row">
+                  <span className="create-club-media-badge">{typeLabel}</span>
+                  {item.year && <span className="create-club-media-year">{item.year}</span>}
+                  {item.author && (
+                    <span className="create-club-media-author">
+                      {item.year ? '• ' : ''}by {item.author}
+                    </span>
+                  )}
+                </div>
+                {item.genre && (
+                  <div className="create-club-media-genres">
+                    {item.genre}
+                  </div>
+                )}
               </div>
             </div>
           </div>

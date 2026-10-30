@@ -1,0 +1,473 @@
+/* EditChannelsModal.css */
+
+.edit-channels-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 26, 24, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 16px;
+  animation: editChannelsFadeIn 0.2s ease-out;
+}
+
+@keyframes editChannelsFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.edit-channels-modal {
+  width: 100%;
+  max-width: 540px;
+  max-height: 88vh;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 70, 67, 0.25), 0 4px 16px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: editChannelsScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes editChannelsScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Modal Header */
+.edit-channels-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  background-color: var(--primary-dark);
+  color: var(--text-inverse);
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 16px;
+}
+
+.edit-channels-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.edit-channels-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-inverse);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.edit-channels-header-divider {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.edit-channels-club-name {
+  font-size: 0.92rem;
+  color: var(--primary-light);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+
+.edit-channels-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.edit-channels-close-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Modal Scrollable Body */
+.edit-channels-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex: 1;
+}
+
+/* Section Titles */
+.edit-channels-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--text-muted);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Channels List */
+.edit-channels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-channel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.edit-channel-item:hover {
+  background-color: #eef5f4;
+  border-color: rgba(0, 70, 67, 0.3);
+}
+
+.edit-channel-item.is-active {
+  background-color: rgba(0, 70, 67, 0.08);
+  border-color: var(--primary-medium);
+  box-shadow: 0 0 0 1px var(--primary-medium);
+}
+
+.edit-channel-item.is-active .edit-channel-icon {
+  color: var(--primary-dark);
+  font-weight: bold;
+}
+
+.edit-channel-item.is-active .edit-channel-name {
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.edit-channel-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.edit-channel-icon {
+  font-size: 0.95rem;
+  color: var(--primary-medium);
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.edit-channel-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edit-channel-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.edit-channel-badge.required {
+  background-color: rgba(0, 70, 67, 0.1);
+  color: var(--primary-dark);
+}
+
+/* Actions in channel row */
+.edit-channel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.edit-channel-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.edit-channel-btn:hover:not(:disabled) {
+  background-color: rgba(0, 70, 67, 0.08);
+  color: var(--primary-dark);
+  border-color: rgba(0, 70, 67, 0.15);
+}
+
+.edit-channel-btn.delete-btn {
+  color: #b91c1c;
+}
+
+.edit-channel-btn.delete-btn:hover:not(:disabled) {
+  background-color: rgba(185, 28, 28, 0.1);
+  color: #7f1d1d;
+  border-color: rgba(185, 28, 28, 0.25);
+}
+
+.edit-channel-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Inline Edit Form */
+.edit-channel-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.edit-channel-inline-input {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  border: 1px solid var(--primary-medium);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text-main);
+  outline: none;
+}
+
+.edit-inline-save-btn {
+  background-color: var(--primary-dark);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.edit-inline-save-btn:hover {
+  background-color: var(--primary-medium);
+}
+
+.edit-inline-cancel-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-inline-cancel-btn:hover {
+  background: rgba(0, 70, 67, 0.05);
+  color: var(--text-main);
+}
+
+/* Inline Confirm Delete Bar */
+.edit-delete-confirm-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.edit-delete-confirm-text {
+  font-size: 0.84rem;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.edit-delete-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-confirm-delete-btn {
+  background-color: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.edit-confirm-delete-btn:hover {
+  background-color: #b91c1c;
+}
+
+/* Create New Channel Box */
+.edit-channels-add-card {
+  background: #f7faf9;
+  border: 1px dashed rgba(0, 70, 67, 0.25);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-channels-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.edit-channels-input-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.edit-channels-input-wrap:focus-within {
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 3px rgba(0, 70, 67, 0.12);
+}
+
+.edit-channels-hash {
+  font-size: 0.95rem;
+  color: var(--primary-medium);
+  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.edit-channels-text-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 4px;
+  font-size: 0.92rem;
+  color: var(--text-main);
+  outline: none;
+}
+
+.edit-channels-text-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.edit-channels-add-btn {
+  background-color: var(--primary-dark);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.edit-channels-add-btn:hover:not(:disabled) {
+  background-color: var(--primary-medium);
+  transform: translateY(-1px);
+}
+
+.edit-channels-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.edit-channels-error-msg {
+  font-size: 0.8rem;
+  color: #dc2626;
+  font-weight: 500;
+  padding-left: 2px;
+}
+
+/* Modal Footer */
+.edit-channels-footer {
+  padding: 14px 24px;
+  background-color: var(--bg-main);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.edit-channels-done-btn {
+  background-color: var(--primary-dark);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-channels-done-btn:hover {
+  background-color: var(--primary-medium);
+}

@@ -20,11 +20,30 @@ const HomePage = () => {
   const [selectedChannelId, setSelectedChannelId] = useState('info');
   const [showMembers, setShowMembers] = useState(true);
 
-  // Clubs state: defaults to empty so new users or users with 0 clubs see the empty state prompt
-  const [clubs, setClubs] = useState([]);
+  // Clubs state: defaults to saved clubs if available, or empty so new users see empty state
+  const [clubs, setClubs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mediaclub_joined_clubs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Error loading saved clubs:', e);
+    }
+    return [];
+  });
   // System clubs: all clubs created in the platform (each media title has one and only one club)
   const [systemClubs, setSystemClubs] = useState(initialClubs);
   const people = initialPeople;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mediaclub_joined_clubs', JSON.stringify(clubs));
+    } catch (e) {
+      console.warn('Error saving clubs:', e);
+    }
+  }, [clubs]);
 
   // Search synchronization
   const [searchQuery, setSearchQuery] = useState('');
@@ -236,6 +255,33 @@ const HomePage = () => {
     setSearchQuery('');
   };
 
+  // Update club channels or metadata
+  const handleUpdateClub = (updatedClub) => {
+    if (!updatedClub) return;
+    setClubs((prev) =>
+      prev.map((c) => (c.id === updatedClub.id ? updatedClub : c))
+    );
+    setSystemClubs((prev) =>
+      prev.map((c) => (c.id === updatedClub.id ? updatedClub : c))
+    );
+  };
+
+  // Leave club handler
+  const handleLeaveClub = (clubId) => {
+    setClubs((prev) => {
+      const remaining = prev.filter((c) => c.id !== clubId);
+      if (remaining.length > 0) {
+        setSelectedItemId(remaining[0].id);
+        if (remaining[0].channels?.length) {
+          setSelectedChannelId(remaining[0].channels[0].id);
+        }
+      } else {
+        setSelectedItemId(null);
+      }
+      return remaining;
+    });
+  };
+
   // Dismiss club creation popup without creating, preserving search focus and opened results
   const handleCloseCreateClubModal = () => {
     setPendingClubToCreate(null);
@@ -289,10 +335,13 @@ const HomePage = () => {
           {activeTab === 'clubs' && clubs.length > 0 && activeItem && (
             <ClubView
               club={activeItem}
+              currentUser={user}
               selectedChannelId={selectedChannelId}
               onSelectChannel={setSelectedChannelId}
               showMembers={showMembers}
               onToggleMembers={() => setShowMembers((prev) => !prev)}
+              onUpdateClub={handleUpdateClub}
+              onLeaveClub={handleLeaveClub}
             />
           )}
 

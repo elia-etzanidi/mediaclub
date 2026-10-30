@@ -6,10 +6,13 @@ import MembersSidebar from './MembersSidebar';
 
 const ClubView = ({
   club,
+  currentUser,
   selectedChannelId,
   onSelectChannel,
   showMembers = true,
-  onToggleMembers
+  onToggleMembers,
+  onUpdateClub,
+  onLeaveClub
 }) => {
   const activeChannel = club.channels?.find((c) => c.id === selectedChannelId) || club.channels?.[0];
   const isInfoChannel =
@@ -20,10 +23,15 @@ const ClubView = ({
   return (
     <div className="club-view">
       <ClubSidebar
+        club={club}
         clubName={club.name}
         channels={club.channels || []}
         selectedChannelId={selectedChannelId}
         onSelectChannel={onSelectChannel}
+        currentUser={currentUser}
+        activeChannel={activeChannel}
+        onUpdateClub={onUpdateClub}
+        onLeaveClub={onLeaveClub}
       />
 
       {isInfoChannel ? (
