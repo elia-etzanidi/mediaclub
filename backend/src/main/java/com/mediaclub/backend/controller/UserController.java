@@ -27,6 +27,20 @@ public class UserController {
         return ResponseEntity.ok(UserProfileResponse.from(user));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<UserProfileResponse> getUserById(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return ResponseEntity.ok(UserProfileResponse.from(user));
+    }
+
+    @GetMapping("/by-username/{username}")
+    public ResponseEntity<UserProfileResponse> getUserByUsername(@PathVariable String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return ResponseEntity.ok(UserProfileResponse.from(user));
+    }
+
     @PatchMapping("/avatar")
     public ResponseEntity<UserProfileResponse> updateAvatar(@Valid @RequestBody UpdateAvatarRequest request) {
         Long userId = currentUserProvider.getCurrentUserId();

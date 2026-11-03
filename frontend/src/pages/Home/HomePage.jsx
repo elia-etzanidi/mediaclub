@@ -35,7 +35,7 @@ const HomePage = () => {
   });
   // System clubs: all clubs created in the platform (each media title has one and only one club)
   const [systemClubs, setSystemClubs] = useState(initialClubs);
-  const people = initialPeople;
+  const [people, setPeople] = useState(initialPeople);
 
   useEffect(() => {
     try {
@@ -103,6 +103,21 @@ const HomePage = () => {
     if (item.channels?.length) {
       setSelectedChannelId(item.channels[0].id);
     }
+  };
+
+  const handleStartDirectMessage = (targetProfile) => {
+    const targetName = targetProfile?.username || targetProfile?.name || 'Member';
+    let person = people.find((p) => p.name?.toLowerCase() === targetName.toLowerCase());
+    if (!person) {
+      person = {
+        id: targetProfile?.id || Date.now(),
+        name: targetName,
+        img: targetProfile?.avatarUrl || defaultAvatar
+      };
+      setPeople((prev) => [...prev, person]);
+    }
+    setActiveTab('people');
+    setSelectedItemId(person.id);
   };
 
   // Focus and highlight the top search bar
@@ -342,6 +357,7 @@ const HomePage = () => {
               onToggleMembers={() => setShowMembers((prev) => !prev)}
               onUpdateClub={handleUpdateClub}
               onLeaveClub={handleLeaveClub}
+              onStartDirectMessage={handleStartDirectMessage}
             />
           )}
 

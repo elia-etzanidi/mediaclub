@@ -1,6 +1,7 @@
 import React from 'react';
+import defaultAvatar from '../../../assets/default-avatar.png';
 
-const MembersSidebar = ({ members = [], onClose }) => {
+const MembersSidebar = ({ members = [], onClose, onOpenUserCard }) => {
   // Separate into moderators and regular members
   // If no member has role === 'moderator', designate the first member as moderator
   const hasExplicitModerator = members.some((m) => m.role === 'moderator');
@@ -10,6 +11,18 @@ const MembersSidebar = ({ members = [], onClose }) => {
   const regularMembers = members.filter(
     (m) => !moderators.some((mod) => (mod.id && m.id ? mod.id === m.id : mod.name === m.name))
   );
+
+  const handleMemberClick = (member, role) => {
+    if (onOpenUserCard) {
+      onOpenUserCard({
+        id: member.id,
+        name: member.name,
+        username: member.name,
+        avatarUrl: member.img,
+        role: role
+      });
+    }
+  };
 
   return (
     <aside className="members-sidebar" aria-label="Club members">
@@ -42,9 +55,31 @@ const MembersSidebar = ({ members = [], onClose }) => {
           </div>
           <div className="members-list">
             {moderators.map((member) => (
-              <div key={member.id || member.name} className="member-cell moderator-cell">
+              <div
+                key={member.id || member.name}
+                className="member-cell moderator-cell"
+                onClick={() => handleMemberClick(member, 'moderator')}
+                role="button"
+                tabIndex={0}
+                title={`View ${member.name}'s account details`}
+                aria-label={`View ${member.name}'s profile`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleMemberClick(member, 'moderator');
+                  }
+                }}
+              >
                 <div className="member-avatar-wrap">
-                  <img src={member.img} alt={member.name} className="member-image" />
+                  <img
+                    src={member.img || defaultAvatar}
+                    alt={member.name}
+                    className="member-image"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = defaultAvatar;
+                    }}
+                  />
                 </div>
                 <div className="member-info">
                   <span className="member-name moderator-name">{member.name}</span>
@@ -68,9 +103,31 @@ const MembersSidebar = ({ members = [], onClose }) => {
           <div className="members-list">
             {regularMembers.length > 0 ? (
               regularMembers.map((member) => (
-                <div key={member.id || member.name} className="member-cell">
+                <div
+                  key={member.id || member.name}
+                  className="member-cell"
+                  onClick={() => handleMemberClick(member, 'member')}
+                  role="button"
+                  tabIndex={0}
+                  title={`View ${member.name}'s account details`}
+                  aria-label={`View ${member.name}'s profile`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleMemberClick(member, 'member');
+                    }
+                  }}
+                >
                   <div className="member-avatar-wrap">
-                    <img src={member.img} alt={member.name} className="member-image" />
+                    <img
+                      src={member.img || defaultAvatar}
+                      alt={member.name}
+                      className="member-image"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = defaultAvatar;
+                      }}
+                    />
                   </div>
                   <div className="member-info">
                     <span className="member-name">{member.name}</span>

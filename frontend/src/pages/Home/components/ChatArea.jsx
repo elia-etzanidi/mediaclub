@@ -26,7 +26,14 @@ const PICKER_EMOJIS = [
   '✨', '🎉', '🚀', '💬', '👀', '⭐', '🙌'
 ];
 
-const ChatArea = ({ club, activeChannel, currentUser }) => {
+const ChatArea = ({
+  club,
+  activeChannel,
+  currentUser,
+  onOpenUserCard,
+  pendingMention,
+  onClearPendingMention
+}) => {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,6 +48,36 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
   const emojiPickerRef = useRef(null);
+
+  // If a mention was requested from the user card, insert @username into input box
+  useEffect(() => {
+    if (pendingMention) {
+      setInputText((prev) => {
+        const prefix = prev && !prev.endsWith(' ') ? `${prev} ` : (prev || '');
+        return `${prefix}@${pendingMention} `;
+      });
+      onClearPendingMention?.();
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        }
+      }, 50);
+    }
+  }, [pendingMention, onClearPendingMention]);
+
+  const handleAuthorClick = (msg, isModerator) => {
+    if (onOpenUserCard) {
+      onOpenUserCard({
+        id: msg.senderId,
+        username: msg.senderUsername,
+        name: msg.senderUsername,
+        avatarUrl: msg.senderAvatarUrl,
+        role: isModerator ? 'moderator' : 'member'
+      });
+    }
+  };
 
   const activeChannelName = activeChannel?.name || 'general';
   const activeChannelId = activeChannel?.id;
@@ -533,6 +570,17 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
                       src={msg.senderAvatarUrl || defaultAvatar}
                       alt={msg.senderUsername || 'User'}
                       className="message-avatar-img"
+                      onClick={() => handleAuthorClick(msg, isSenderModerator)}
+                      role="button"
+                      tabIndex={0}
+                      title={`View ${msg.senderUsername || 'user'}'s account details`}
+                      aria-label={`View ${msg.senderUsername || 'user'}'s profile`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleAuthorClick(msg, isSenderModerator);
+                        }
+                      }}
                       onError={(e) => {
                         e.target.src = defaultAvatar;
                       }}
@@ -548,7 +596,20 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
                 <div className="message-body-col">
                   {!isSameSender && (
                     <div className="message-header">
-                      <span className="message-author-name">
+                      <span
+                        className="message-author-name"
+                        onClick={() => handleAuthorClick(msg, isSenderModerator)}
+                        role="button"
+                        tabIndex={0}
+                        title={`View ${msg.senderUsername || 'user'}'s account details`}
+                        aria-label={`View ${msg.senderUsername || 'user'}'s profile`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleAuthorClick(msg, isSenderModerator);
+                          }
+                        }}
+                      >
                         {msg.senderUsername || 'Member'}
                       </span>
                       {isSenderModerator && (

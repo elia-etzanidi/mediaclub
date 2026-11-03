@@ -14,4 +14,5 @@ export { default as ManageMembersModal } from './ManageMembersModal';
 export { default as DeleteMessageModal } from './DeleteMessageModal';
 export { default as LeaveClubModal } from './LeaveClubModal';
 export { default as ClubInfoView } from './ClubInfoView';
+export { default as UserAccountModal } from './UserAccountModal';
 export * from './mockData';
