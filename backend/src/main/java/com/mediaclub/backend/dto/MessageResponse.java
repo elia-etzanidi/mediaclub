@@ -15,6 +15,7 @@ public class MessageResponse {
     private Long channelId;
     private Long senderId;
     private String senderUsername;
+    private String senderAvatarUrl;
     private String content;
     private Instant sentAt;
     private Instant editedAt;
@@ -27,6 +28,7 @@ public class MessageResponse {
                 message.getChannel().getId(),
                 message.getSender().getId(),
                 message.getSender().getUsername(),
+                message.getSender().getAvatarUrl(),
                 message.isDeleted() ? "[message deleted]" : message.getContent(),
                 message.getSentAt(),
                 message.getEditedAt(),

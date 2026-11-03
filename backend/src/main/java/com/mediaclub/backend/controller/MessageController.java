@@ -3,11 +3,13 @@ package com.mediaclub.backend.controller;
 import com.mediaclub.backend.dto.AddReactionRequest;
 import com.mediaclub.backend.dto.MessageResponse;
 import com.mediaclub.backend.dto.ReactionSummary;
+import com.mediaclub.backend.dto.SendMessageRequest;
 import com.mediaclub.backend.security.CurrentUserProvider;
 import com.mediaclub.backend.service.MessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +20,7 @@ public class MessageController {
 
     private final MessageService messageService;
     private final CurrentUserProvider currentUserProvider;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/api/channels/{channelId}/messages")
     public ResponseEntity<List<MessageResponse>> getHistory(
@@ -25,6 +28,16 @@ public class MessageController {
             @RequestParam(defaultValue = "50") int limit) {
         Long userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.ok(messageService.getHistory(channelId, userId, limit));
+    }
+
+    @PostMapping("/api/channels/{channelId}/messages")
+    public ResponseEntity<MessageResponse> sendMessage(
+            @PathVariable Long channelId,
+            @Valid @RequestBody SendMessageRequest request) {
+        Long userId = currentUserProvider.getCurrentUserId();
+        MessageResponse response = messageService.sendMessage(channelId, userId, request.getContent());
+        messagingTemplate.convertAndSend("/topic/channel/" + channelId, response);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/api/messages/{messageId}")

@@ -102,6 +102,7 @@ const SearchBar = ({
     <div
       ref={containerRef}
       className={`search-container ${isHighlighted ? 'search-spotlight' : ''}`}
+      onClick={() => searchInputRef.current?.focus()}
     >
       <svg
         className="search-icon"

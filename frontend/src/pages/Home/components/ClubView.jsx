@@ -42,7 +42,10 @@ const ClubView = ({
         />
       ) : (
         <ChatArea
+          club={club}
           activeChannel={activeChannel}
+          currentUser={currentUser}
+          onSelectChannel={onSelectChannel}
         />
       )}
 
