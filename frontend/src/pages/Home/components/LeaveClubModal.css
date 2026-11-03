@@ -1,0 +1,216 @@
+/* LeaveClubModal.css - Custom UI popup for leaving a club */
+
+.leave-club-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 26, 24, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 16px;
+  animation: leaveModalFadeIn 0.18s ease-out;
+}
+
+@keyframes leaveModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.leave-club-modal {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--bg-panel, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(0, 70, 67, 0.15));
+  border-radius: 16px;
+  box-shadow:
+    0 20px 48px rgba(0, 70, 67, 0.2),
+    0 6px 18px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: leaveModalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes leaveModalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* --- Modal Header --- */
+.leave-club-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px 22px;
+  background: var(--bg-panel, #ffffff);
+  border-bottom: 1px solid rgba(0, 70, 67, 0.08);
+}
+
+.leave-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.leave-danger-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(220, 38, 38, 0.12);
+}
+
+.leave-club-title {
+  font-family: var(--font-heading, 'Fraunces', serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main, #112625);
+  letter-spacing: -0.2px;
+}
+
+.leave-close-btn {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  padding: 0;
+}
+
+.leave-close-btn:hover {
+  background-color: var(--bg-main, #f4f8f7);
+  color: var(--text-main, #112625);
+  transform: scale(1.05);
+}
+
+/* --- Modal Body --- */
+.leave-club-body {
+  padding: 22px 22px;
+}
+
+.leave-prompt-text {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: #374151;
+  font-weight: 500;
+}
+
+.leave-prompt-text strong {
+  color: var(--text-main, #112625);
+  font-weight: 700;
+}
+
+/* --- Modal Footer --- */
+.leave-club-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 22px;
+  background-color: #f9fafb;
+  border-top: 1px solid rgba(0, 70, 67, 0.08);
+}
+
+.leave-btn-cancel {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 70, 67, 0.2);
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.leave-btn-cancel:hover {
+  background-color: #f3f4f6;
+  border-color: rgba(0, 70, 67, 0.35);
+  color: #111827;
+}
+
+.leave-btn-cancel:focus-visible {
+  outline: 2px solid var(--primary-medium, #357979);
+  outline-offset: 2px;
+}
+
+.leave-btn-confirm {
+  background-color: #dc2626;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.22);
+  transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.leave-btn-confirm:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+}
+
+.leave-btn-confirm:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+.leave-btn-confirm:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .leave-club-modal {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .leave-club-header {
+    padding: 16px 18px 12px 18px;
+  }
+
+  .leave-club-body {
+    padding: 18px 18px;
+  }
+
+  .leave-club-footer {
+    padding: 12px 18px;
+  }
+}

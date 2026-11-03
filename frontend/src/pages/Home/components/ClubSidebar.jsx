@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import EditChannelsModal from './EditChannelsModal';
 import ManageMembersModal from './ManageMembersModal';
+import LeaveClubModal from './LeaveClubModal';
 
 const ClubSidebar = ({
   club,
@@ -16,6 +17,7 @@ const ClubSidebar = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditChannelsOpen, setIsEditChannelsOpen] = useState(false);
   const [isManageMembersOpen, setIsManageMembersOpen] = useState(false);
+  const [isLeaveClubOpen, setIsLeaveClubOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const menuContainerRef = useRef(null);
@@ -176,13 +178,15 @@ const ClubSidebar = ({
     setIsMenuOpen(false);
   };
 
-  // Leave Club
-  const handleConfirmLeave = () => {
+  // Leave Club Modal Handlers
+  const handleOpenLeaveModal = () => {
     setIsMenuOpen(false);
-    const confirmed = window.confirm(
-      `Are you sure you want to leave ${activeClubName}? You can rejoin anytime via search.`
-    );
-    if (confirmed && onLeaveClub && club?.id) {
+    setIsLeaveClubOpen(true);
+  };
+
+  const handleConfirmLeave = () => {
+    setIsLeaveClubOpen(false);
+    if (onLeaveClub && club?.id) {
       onLeaveClub(club.id);
     }
   };
@@ -429,7 +433,7 @@ const ClubSidebar = ({
                     <button
                       type="button"
                       className="club-dropdown-item danger-item"
-                      onClick={handleConfirmLeave}
+                      onClick={handleOpenLeaveModal}
                       role="menuitem"
                     >
                       <span className="club-dropdown-item-icon danger-icon">
@@ -524,12 +528,20 @@ const ClubSidebar = ({
 
       {/* Manage Members Modal (Opened via Moderator Menu option) */}
       <ManageMembersModal
-        isOpen={isManageMembersOpen}
         club={club || { name: activeClubName, members: club?.members || [] }}
         currentUser={currentUser}
-        onUpdateClub={onUpdateClub}
+        isOpen={isManageMembersOpen}
         onClose={() => setIsManageMembersOpen(false)}
+        onUpdateClub={onUpdateClub}
         showToast={showToast}
+      />
+
+      {/* Leave Club Confirmation Popup Modal */}
+      <LeaveClubModal
+        isOpen={isLeaveClubOpen}
+        clubName={activeClubName}
+        onConfirm={handleConfirmLeave}
+        onClose={() => setIsLeaveClubOpen(false)}
       />
 
       {/* Toast Notification for Link Copying & Settings */}

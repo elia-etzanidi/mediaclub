@@ -11,5 +11,7 @@ export { default as EmptyClubsView } from './EmptyClubsView';
 export { default as CreateClubModal } from './CreateClubModal';
 export { default as EditChannelsModal } from './EditChannelsModal';
 export { default as ManageMembersModal } from './ManageMembersModal';
+export { default as DeleteMessageModal } from './DeleteMessageModal';
+export { default as LeaveClubModal } from './LeaveClubModal';
 export { default as ClubInfoView } from './ClubInfoView';
 export * from './mockData';

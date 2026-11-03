@@ -7,6 +7,7 @@ import {
   deleteChannelMessage,
   toggleMessageReaction
 } from '../../../services/messageService';
+import DeleteMessageModal from './DeleteMessageModal';
 
 // Standard topic hints by channel name
 const CHANNEL_TOPICS = {
@@ -33,6 +34,8 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
   const [revealedSpoilers, setRevealedSpoilers] = useState({});
   const [showSpoilerBanner, setShowSpoilerBanner] = useState(true);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState(null);
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -144,10 +147,27 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
   };
 
   // Delete message
-  const handleDeleteMessage = async (messageId) => {
-    if (window.confirm('Are you sure you want to delete this message?')) {
-      const updated = await deleteChannelMessage(club.id, activeChannel.id, messageId);
+  const handleRequestDelete = (msg) => {
+    setMessageToDelete(msg);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!messageToDelete || isDeletingMessage) return;
+    setIsDeletingMessage(true);
+    try {
+      const updated = await deleteChannelMessage(club.id, activeChannel.id, messageToDelete.id);
       setMessages(updated);
+      setMessageToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+    } finally {
+      setIsDeletingMessage(false);
+    }
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (!isDeletingMessage) {
+      setMessageToDelete(null);
     }
   };
 
@@ -229,7 +249,7 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
       parts.push({
         type: 'text',
         value: content.substring(lastIndex),
-        key: `txt-${tokenIndex++}`
+        key: `txt-${tokenIndex}`
       });
     }
 
@@ -590,7 +610,7 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
                     <button
                       type="button"
                       className="action-btn delete-btn"
-                      onClick={() => handleDeleteMessage(msg.id)}
+                      onClick={() => handleRequestDelete(msg)}
                       title="Delete message"
                       aria-label="Delete message"
                     >
@@ -742,6 +762,14 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
           <span>✦ {activeChannelName}</span>
         </div>
       </div>
+
+      {/* Delete Message Confirmation Popup Modal */}
+      <DeleteMessageModal
+        isOpen={Boolean(messageToDelete)}
+        onConfirm={handleConfirmDelete}
+        onClose={handleCloseDeleteModal}
+        isDeleting={isDeletingMessage}
+      />
     </div>
   );
 };
