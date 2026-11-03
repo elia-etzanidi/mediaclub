@@ -49,7 +49,7 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
   // Topic description
   const channelTopic =
     CHANNEL_TOPICS[activeChannelName.toLowerCase()] ||
-    `Discussion channel for #${activeChannelName}`;
+    `Discussion channel for ✦ ${activeChannelName}`;
 
   // Load channel messages whenever channel changes
   useEffect(() => {
@@ -367,7 +367,20 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
               }
             }}
           >
-            <span className="chat-filter-icon">🔍</span>
+            <svg
+              className="chat-filter-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
             <input
               type="text"
               className="chat-filter-input"
@@ -423,9 +436,9 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
             <div className="channel-welcome-icon-box">
               <span>✦</span>
             </div>
-            <h1 className="channel-welcome-title">Welcome to #{activeChannelName}!</h1>
+            <h1 className="channel-welcome-title">Welcome to ✦ {activeChannelName}!</h1>
             <p className="channel-welcome-desc">
-              This is the official start of the <strong>#{activeChannelName}</strong> channel in{' '}
+              This is the official start of the <strong>✦ {activeChannelName}</strong> channel in{' '}
               <strong>{clubName}</strong>. Kick off the conversation or say hello to fellow members!
             </p>
           </div>
@@ -434,7 +447,20 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
         {/* Empty Search Results */}
         {searchQuery && filteredMessages.length === 0 && (
           <div className="chat-empty-filter">
-            <span className="chat-empty-filter-icon">🔍</span>
+            <svg
+              className="chat-empty-filter-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
             <p>No messages matching &ldquo;{searchQuery}&rdquo;</p>
             <button
               type="button"
@@ -626,18 +652,18 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
           }}
         >
           <label htmlFor="chat-channel-input" className="visually-hidden" style={{ display: 'none' }}>
-            Message #{activeChannelName}
+            Message ✦ {activeChannelName}
           </label>
           <textarea
             id="chat-channel-input"
             ref={textareaRef}
             className="chat-textarea"
-            placeholder={`Message #${activeChannelName}...`}
+            placeholder={`Message ✦ ${activeChannelName}...`}
             value={inputText}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             rows={1}
-            aria-label={`Message #${activeChannelName}`}
+            aria-label={`Message ✦ ${activeChannelName}`}
           />
 
           <div className="chat-input-toolbar">
@@ -713,7 +739,7 @@ const ChatArea = ({ club, activeChannel, currentUser }) => {
           <span>
             <strong>Enter</strong> to send • <strong>Shift + Enter</strong> for new line • <strong>||spoiler||</strong> to hide
           </span>
-          <span>✦ #{activeChannelName}</span>
+          <span>✦ {activeChannelName}</span>
         </div>
       </div>
     </div>

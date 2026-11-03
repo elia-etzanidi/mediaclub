@@ -108,9 +108,10 @@
 .chat-filter-icon {
   position: absolute;
   left: 10px;
-  pointer-events: none;
-  font-size: 0.8rem;
+  width: 14px;
+  height: 14px;
   color: var(--text-muted);
+  pointer-events: none;
 }
 
 .chat-filter-clear-btn {
@@ -775,8 +776,10 @@
 }
 
 .chat-empty-filter-icon {
-  font-size: 2rem;
-  margin-bottom: 8px;
+  width: 42px;
+  height: 42px;
+  color: var(--primary-medium);
+  margin-bottom: 12px;
   opacity: 0.6;
 }
 

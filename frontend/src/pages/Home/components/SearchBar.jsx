@@ -77,7 +77,7 @@ const SearchBar = ({
     };
   }, [query, filter]);
 
-  // Click outside listener to dismiss popup
+  // Click outside listener to dismiss popup and automatically clear search
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -88,13 +88,21 @@ const SearchBar = ({
       }
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsDismissed(true);
+        setResults([]);
+        if (onSearchChange) {
+          onSearchChange('');
+        } else {
+          setInternalQuery('');
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, []);
+  }, [onSearchChange]);
 
   const isOpen = !isDismissed && query.trim().length > 0;
 
@@ -127,6 +135,18 @@ const SearchBar = ({
           if (query.trim().length > 0) setIsDismissed(false);
         }}
         onChange={(e) => handleQueryChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            setIsDismissed(true);
+            setResults([]);
+            if (onSearchChange) {
+              onSearchChange('');
+            } else {
+              setInternalQuery('');
+            }
+            searchInputRef.current?.blur();
+          }
+        }}
       />
 
       {isOpen && query.trim().length > 0 && (
