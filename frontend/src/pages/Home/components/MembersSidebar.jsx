@@ -27,14 +27,34 @@ const MembersSidebar = ({
     return name === currentUsername;
   };
 
-  const handleMemberClick = (member, role) => {
+  const getMemberStatus = (member) => {
+    if (isSelf(member)) return { isOnline: true, label: 'Online' };
+    if (member.isOnline !== undefined) {
+      return {
+        isOnline: Boolean(member.isOnline),
+        label: member.status || (member.isOnline ? 'Online' : 'Offline')
+      };
+    }
+    if (member.status) {
+      const isOffline = member.status.toLowerCase().includes('offline');
+      return {
+        isOnline: !isOffline,
+        label: member.status
+      };
+    }
+    // Default to Online in this active club environment
+    return { isOnline: true, label: 'Online' };
+  };
+
+  const handleMemberClick = (member, role, statusInfo) => {
     if (onOpenUserCard) {
       onOpenUserCard({
         id: member.id,
         name: member.name,
         username: member.name,
         avatarUrl: member.img,
-        role: role
+        role: role,
+        status: statusInfo?.label || 'Online'
       });
     }
   };
@@ -53,20 +73,22 @@ const MembersSidebar = ({
 
   const renderMemberCell = (member, role) => {
     const isCurrentUser = isSelf(member);
+    const statusInfo = getMemberStatus(member);
+    const { isOnline, label: statusLabel } = statusInfo;
 
     return (
       <div
         key={member.id || member.name}
         className={`member-cell ${role === 'moderator' ? 'moderator-cell' : ''}`}
-        onClick={() => handleMemberClick(member, role)}
+        onClick={() => handleMemberClick(member, role, statusInfo)}
         role="button"
         tabIndex={0}
-        title={`View ${member.name}'s account details`}
-        aria-label={`View ${member.name}'s profile`}
+        title={`${member.name} • ${isCurrentUser ? 'Online (You)' : statusLabel}`}
+        aria-label={`${member.name}, ${role === 'moderator' ? 'Moderator' : 'Member'}, ${isCurrentUser ? 'Online (You)' : statusLabel}`}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            handleMemberClick(member, role);
+            handleMemberClick(member, role, statusInfo);
           }
         }}
       >
@@ -79,6 +101,11 @@ const MembersSidebar = ({
               e.target.onerror = null;
               e.target.src = defaultAvatar;
             }}
+          />
+          <span
+            className={`member-status-dot ${isOnline ? 'online' : 'offline'}`}
+            title={statusLabel}
+            aria-hidden="true"
           />
         </div>
         <div className="member-info">

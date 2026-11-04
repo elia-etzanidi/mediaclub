@@ -1095,6 +1095,26 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+.member-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  background-color: #22c55e;
+  border: 2px solid var(--bg-main);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.member-status-dot.offline {
+  background-color: #94a3b8;
+}
+
+.member-cell:hover .member-status-dot {
+  border-color: #eaf1f0;
+}
+
 .member-info {
   flex: 1;
   min-width: 0;
@@ -1470,6 +1490,11 @@
   .member-image {
     width: 28px;
     height: 28px;
+  }
+
+  .member-status-dot {
+    width: 8px;
+    height: 8px;
   }
 
   .member-name {
