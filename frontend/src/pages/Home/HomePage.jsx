@@ -9,6 +9,9 @@ import {
   ClubView,
   DirectMessageView,
   EmptyClubsView,
+  EmptyDirectMessagesView,
+  StartDirectMessageModal,
+  UserAccountModal,
   CreateClubModal
 } from './components';
 import { getCurrentUser, getUserProfile } from '../../services/authService';
@@ -16,9 +19,23 @@ import defaultAvatar from '../../assets/default-avatar.png';
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState('clubs');
-  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedClubId, setSelectedClubId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mediaclub_last_selected_club_id');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  });
+  const [selectedPersonId, setSelectedPersonId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mediaclub_last_selected_person_id');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return null;
+  });
   const [selectedChannelId, setSelectedChannelId] = useState('info');
   const [showMembers, setShowMembers] = useState(true);
+  const [dmUpdateTick, setDmUpdateTick] = useState(0);
 
   // Clubs state: defaults to saved clubs if available, or empty so new users see empty state
   const [clubs, setClubs] = useState(() => {
@@ -35,7 +52,23 @@ const HomePage = () => {
   });
   // System clubs: all clubs created in the platform (each media title has one and only one club)
   const [systemClubs, setSystemClubs] = useState(initialClubs);
-  const [people, setPeople] = useState(initialPeople);
+
+  // Direct message contacts state (persisted)
+  const [people, setPeople] = useState(() => {
+    try {
+      const saved = localStorage.getItem('mediaclub_direct_messages_people');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Error loading saved direct message people:', e);
+    }
+    return initialPeople;
+  });
+
+  const [isStartDmModalOpen, setIsStartDmModalOpen] = useState(false);
+  const [selectedUserForDmCard, setSelectedUserForDmCard] = useState(null);
 
   useEffect(() => {
     try {
@@ -44,6 +77,42 @@ const HomePage = () => {
       console.warn('Error saving clubs:', e);
     }
   }, [clubs]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mediaclub_direct_messages_people', JSON.stringify(people));
+    } catch (e) {
+      console.warn('Error saving direct message people:', e);
+    }
+  }, [people]);
+
+  useEffect(() => {
+    if (selectedClubId) {
+      try {
+        localStorage.setItem('mediaclub_last_selected_club_id', JSON.stringify(selectedClubId));
+      } catch (e) {}
+    }
+  }, [selectedClubId]);
+
+  useEffect(() => {
+    if (selectedPersonId) {
+      try {
+        localStorage.setItem('mediaclub_last_selected_person_id', JSON.stringify(selectedPersonId));
+      } catch (e) {}
+    }
+  }, [selectedPersonId]);
+
+  // Ensure a chat is always selected when people exist
+  useEffect(() => {
+    if (people.length > 0) {
+      const exists = people.some((p) => p.id === selectedPersonId);
+      if (!exists) {
+        setSelectedPersonId(people[0].id);
+      }
+    } else {
+      setSelectedPersonId(null);
+    }
+  }, [people, selectedPersonId]);
 
   // Search synchronization
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,42 +151,81 @@ const HomePage = () => {
     setUser((prev) => ({ ...prev, ...updatedFields }));
   };
 
-  const displayList = activeTab === 'clubs' ? clubs : people;
-  const activeItem = displayList.find((item) => item.id === selectedItemId) || displayList[0];
+  // Active club: selectedClubId if found in clubs, else first club
+  const activeClub = clubs.find((c) => c.id === selectedClubId) || clubs[0];
+
+  // Active person: selectedPersonId (the last chat the user had open) or first person
+  const activePerson = people.find((p) => p.id === selectedPersonId) || people[0];
+
+  // Current selected item ID for LeftPane highlighting
+  const currentSelectedId = activeTab === 'clubs' ? activeClub?.id : activePerson?.id;
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    const list = tab === 'clubs' ? clubs : people;
-    if (list.length > 0) {
-      setSelectedItemId(list[0].id);
-      if (tab === 'clubs' && list[0].channels?.length) {
-        setSelectedChannelId(list[0].channels[0].id);
+    if (tab === 'clubs') {
+      if (!selectedClubId && clubs.length > 0) {
+        setSelectedClubId(clubs[0].id);
       }
-    } else {
-      setSelectedItemId(null);
+      if (activeClub?.channels?.length) {
+        setSelectedChannelId(activeClub.channels[0].id);
+      }
+    } else if (tab === 'people') {
+      // The last chat the user had open will be shown!
+      if (people.length > 0) {
+        const exists = people.some((p) => p.id === selectedPersonId);
+        if (!exists) {
+          setSelectedPersonId(people[0].id);
+        }
+      }
     }
   };
 
   const handleSelectItem = (item) => {
-    setSelectedItemId(item.id);
-    if (item.channels?.length) {
-      setSelectedChannelId(item.channels[0].id);
+    if (activeTab === 'clubs') {
+      setSelectedClubId(item.id);
+      if (item.channels?.length) {
+        setSelectedChannelId(item.channels[0].id);
+      }
+    } else {
+      setSelectedPersonId(item.id);
     }
   };
 
   const handleStartDirectMessage = (targetProfile) => {
     const targetName = targetProfile?.username || targetProfile?.name || 'Member';
-    let person = people.find((p) => p.name?.toLowerCase() === targetName.toLowerCase());
+    const targetImg = targetProfile?.avatarUrl || targetProfile?.pfp || targetProfile?.img || defaultAvatar;
+    let person = people.find((p) => (p.name || p.username || '').toLowerCase() === targetName.toLowerCase());
     if (!person) {
       person = {
         id: targetProfile?.id || Date.now(),
         name: targetName,
-        img: targetProfile?.avatarUrl || defaultAvatar
+        username: targetName,
+        img: targetImg,
+        role: targetProfile?.role || 'member'
       };
-      setPeople((prev) => [...prev, person]);
+      setPeople((prev) => [person, ...prev]);
     }
     setActiveTab('people');
-    setSelectedItemId(person.id);
+    setSelectedPersonId(person.id);
+  };
+
+  const handleDmMessageSent = (person, newMsg) => {
+    setDmUpdateTick((prev) => prev + 1);
+    setPeople((prev) => {
+      const matchIndex = prev.findIndex(
+        (p) => p.id === person.id || (p.name && person.name && p.name.toLowerCase() === person.name.toLowerCase())
+      );
+      if (matchIndex === -1) return prev;
+      const updatedPerson = {
+        ...prev[matchIndex],
+        lastMessage: newMsg?.content || '',
+        lastMessageAt: newMsg?.sentAt || new Date().toISOString()
+      };
+      const nextList = [...prev];
+      nextList.splice(matchIndex, 1);
+      nextList.unshift(updatedPerson);
+      return nextList;
+    });
   };
 
   // Focus and highlight the top search bar
@@ -197,7 +305,7 @@ const HomePage = () => {
     });
 
     setActiveTab('clubs');
-    setSelectedItemId(targetClub.id);
+    setSelectedClubId(targetClub.id);
     if (targetClub.channels?.length) {
       setSelectedChannelId(targetClub.channels[0].id);
     }
@@ -262,7 +370,7 @@ const HomePage = () => {
     setSystemClubs((prev) => [...prev, newClub]);
     setClubs((prev) => [...prev, newClub]);
     setActiveTab('clubs');
-    setSelectedItemId(newClub.id);
+    setSelectedClubId(newClub.id);
     if (newClub.channels?.length) {
       setSelectedChannelId(newClub.channels[0].id);
     }
@@ -286,12 +394,12 @@ const HomePage = () => {
     setClubs((prev) => {
       const remaining = prev.filter((c) => c.id !== clubId);
       if (remaining.length > 0) {
-        setSelectedItemId(remaining[0].id);
+        setSelectedClubId(remaining[0].id);
         if (remaining[0].channels?.length) {
           setSelectedChannelId(remaining[0].channels[0].id);
         }
       } else {
-        setSelectedItemId(null);
+        setSelectedClubId(null);
       }
       return remaining;
     });
@@ -335,10 +443,12 @@ const HomePage = () => {
         <LeftPane
           activeTab={activeTab}
           onTabChange={handleTabChange}
-          items={displayList}
-          selectedItemId={selectedItemId}
+          items={activeTab === 'clubs' ? clubs : people}
+          selectedItemId={currentSelectedId}
           onSelectItem={handleSelectItem}
           onFocusSearch={() => handleFocusSearch()}
+          onOpenStartDmModal={() => setIsStartDmModalOpen(true)}
+          dmUpdateTick={dmUpdateTick}
         />
 
         {/* Right Component */}
@@ -347,9 +457,9 @@ const HomePage = () => {
             <EmptyClubsView onFocusSearch={() => handleFocusSearch()} />
           )}
 
-          {activeTab === 'clubs' && clubs.length > 0 && activeItem && (
+          {activeTab === 'clubs' && clubs.length > 0 && activeClub && (
             <ClubView
-              club={activeItem}
+              club={activeClub}
               currentUser={user}
               selectedChannelId={selectedChannelId}
               onSelectChannel={setSelectedChannelId}
@@ -361,11 +471,47 @@ const HomePage = () => {
             />
           )}
 
-          {activeTab === 'people' && activeItem && (
-            <DirectMessageView person={activeItem} />
+          {activeTab === 'people' && people.length === 0 && (
+            <EmptyDirectMessagesView
+              onStartNewChat={() => setIsStartDmModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'people' && people.length > 0 && activePerson && (
+            <DirectMessageView
+              person={activePerson}
+              currentUser={user}
+              clubs={clubs}
+              onOpenUserCard={(u) => setSelectedUserForDmCard(u)}
+              onMessageSent={handleDmMessageSent}
+            />
           )}
         </section>
       </main>
+
+      {/* Start Direct Message Modal */}
+      {isStartDmModalOpen && (
+        <StartDirectMessageModal
+          isOpen={isStartDmModalOpen}
+          onClose={() => setIsStartDmModalOpen(false)}
+          clubs={clubs}
+          systemClubs={systemClubs}
+          currentUser={user}
+          onSelectUser={handleStartDirectMessage}
+        />
+      )}
+
+      {/* User Account Card when clicked inside Direct Messages */}
+      {selectedUserForDmCard && (
+        <UserAccountModal
+          isOpen={Boolean(selectedUserForDmCard)}
+          user={selectedUserForDmCard}
+          club={null}
+          currentUser={user}
+          onClose={() => setSelectedUserForDmCard(null)}
+          onStartDirectMessage={handleStartDirectMessage}
+        />
+      )}
 
       {/* Moderator Explanation Popup Modal before creating club */}
       {pendingClubToCreate && (

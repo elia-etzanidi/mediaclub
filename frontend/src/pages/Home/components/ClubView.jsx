@@ -74,6 +74,8 @@ const ClubView = ({
           members={club.members || []}
           onClose={onToggleMembers}
           onOpenUserCard={handleOpenUserCard}
+          onStartDirectMessage={onStartDirectMessage}
+          currentUser={currentUser}
         />
       ) : (
         <button

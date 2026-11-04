@@ -1,4 +1,6 @@
 import React from 'react';
+import { getLatestDmSnippet } from '../../../services/directMessageService';
+import defaultAvatar from '../../../assets/default-avatar.png';
 
 const LeftPane = ({
   activeTab,
@@ -6,7 +8,9 @@ const LeftPane = ({
   items,
   selectedItemId,
   onSelectItem,
-  onFocusSearch
+  onFocusSearch,
+  onOpenStartDmModal,
+  dmUpdateTick
 }) => {
   return (
     <aside className="left-pane">
@@ -25,8 +29,29 @@ const LeftPane = ({
         </button>
       </div>
 
+      {activeTab === 'people' && (
+        <div className="left-pane-sub-header">
+          <span className="left-pane-sub-title">DIRECT MESSAGES</span>
+          {onOpenStartDmModal && (
+            <button
+              type="button"
+              className="left-pane-add-dm-btn"
+              onClick={onOpenStartDmModal}
+              title="Start a new direct message"
+              aria-label="Start a new direct message"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>New</span>
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="scrollable-list">
-        {items.length === 0 ? (
+        {activeTab === 'clubs' && items.length === 0 ? (
           <div className="left-pane-empty">
             <div className="left-pane-empty-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -36,14 +61,12 @@ const LeftPane = ({
               </svg>
             </div>
             <div className="left-pane-empty-title">
-              {activeTab === 'clubs' ? 'No clubs yet' : 'No direct messages'}
+              No clubs yet
             </div>
             <p className="left-pane-empty-text">
-              {activeTab === 'clubs'
-                ? 'Join or create one using search above'
-                : 'Start a conversation with someone'}
+              Join or create one using search above
             </p>
-            {activeTab === 'clubs' && onFocusSearch && (
+            {onFocusSearch && (
               <button
                 type="button"
                 className="left-pane-empty-btn"
@@ -54,16 +77,44 @@ const LeftPane = ({
             )}
           </div>
         ) : (
-          items.map((item) => (
-            <div
-              key={item.id}
-              className={`list-cell ${selectedItemId === item.id ? 'selected' : ''}`}
-              onClick={() => onSelectItem(item)}
-            >
-              <img src={item.img} alt={item.name} className="cell-image" />
-              <span className="cell-name">{item.name}</span>
-            </div>
-          ))
+          items.map((item) => {
+            const isSelected = selectedItemId === item.id;
+            const snippet = activeTab === 'people'
+              ? getLatestDmSnippet(item) || (item.lastMessage ? { content: item.lastMessage } : null)
+              : null;
+
+            return (
+              <div
+                key={item.id}
+                className={`list-cell ${isSelected ? 'selected' : ''} ${activeTab === 'people' ? 'dm-list-cell' : ''}`}
+                onClick={() => onSelectItem(item)}
+              >
+                <div className="cell-image-wrapper">
+                  <img
+                    src={item.img || defaultAvatar}
+                    alt={item.name}
+                    className="cell-image"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = defaultAvatar;
+                    }}
+                  />
+                  {activeTab === 'people' && (
+                    <span className="cell-online-dot" aria-hidden="true" />
+                  )}
+                </div>
+
+                <div className="cell-info-wrap">
+                  <span className="cell-name">{item.name}</span>
+                  {snippet && snippet.content && (
+                    <span className="cell-snippet" title={snippet.content.replace(/\|\|/g, '')}>
+                      {snippet.content.replace(/\r?\n+/g, ' ').replace(/\|\|/g, '').trim()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </aside>

@@ -46,7 +46,7 @@ export const initialClubs = [
 ];
 
 export const initialPeople = [
-  { id: 101, name: 'Alice Smith', img: 'https://via.placeholder.com/50/FF5733/FFFFFF' }
+  { id: 101, name: 'Alice Smith', img: defaultAvatar }
 ];
 
 export const mockSearchResults = [

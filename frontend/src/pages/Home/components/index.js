@@ -8,6 +8,8 @@ export { default as ChatArea } from './ChatArea';
 export { default as MembersSidebar } from './MembersSidebar';
 export { default as DirectMessageView } from './DirectMessageView';
 export { default as EmptyClubsView } from './EmptyClubsView';
+export { default as EmptyDirectMessagesView } from './EmptyDirectMessagesView';
+export { default as StartDirectMessageModal } from './StartDirectMessageModal';
 export { default as CreateClubModal } from './CreateClubModal';
 export { default as EditChannelsModal } from './EditChannelsModal';
 export { default as ManageMembersModal } from './ManageMembersModal';

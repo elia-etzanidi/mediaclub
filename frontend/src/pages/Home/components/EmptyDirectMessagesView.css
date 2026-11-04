@@ -1,0 +1,65 @@
+/* EmptyDirectMessagesView.css - Clean, centered 'No direct messages' view moved from left panel */
+
+.main-empty-dm-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background-color: var(--bg-panel);
+  height: 100%;
+}
+
+.main-empty-dm-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.main-empty-dm-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: rgba(0, 70, 67, 0.08);
+  color: var(--primary-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.main-empty-dm-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-top: 2px;
+}
+
+.main-empty-dm-text {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.main-empty-dm-btn {
+  margin-top: 10px;
+  background-color: var(--primary-dark);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.main-empty-dm-btn:hover {
+  background-color: var(--primary-medium);
+  transform: translateY(-1px);
+}
