@@ -16,12 +16,6 @@ const PICKER_EMOJIS = [
   '✨', '🎉', '🚀', '💬', '👀', '⭐', '🙌'
 ];
 
-const ICEBREAKER_PROMPTS = [
-  '👋 Hey there! How are you doing?',
-  '🎬 What was your favorite scene in the club movie?',
-  '🍿 What are you planning to watch next?',
-  '📚 Any great book recommendations to share?'
-];
 
 const DirectMessageView = ({
   person,
@@ -311,13 +305,12 @@ const DirectMessageView = ({
           <div className="dm-header-meta">
             <div className="dm-header-name-row">
               <h2 className="dm-header-name">{personName}</h2>
-              <span className="dm-header-tag">Direct Message</span>
             </div>
-            <p className="dm-header-subtitle">
-              {sharedClubs.length > 0
-                ? `Shares: ${sharedClubs.join(', ')}`
-                : 'Private Conversation'}
-            </p>
+            {sharedClubs.length > 0 && (
+              <p className="dm-header-subtitle">
+                Shares: {sharedClubs.join(', ')}
+              </p>
+            )}
           </div>
         </div>
 
@@ -403,24 +396,6 @@ const DirectMessageView = ({
             )}
           </p>
 
-          {/* Icebreaker chips */}
-          {messages.length === 0 && (
-            <div className="dm-icebreaker-container">
-              <span className="dm-icebreaker-heading">Need an icebreaker? Click one to send:</span>
-              <div className="dm-icebreaker-chips">
-                {ICEBREAKER_PROMPTS.map((prompt, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className="dm-icebreaker-chip"
-                    onClick={() => handleSendMessage(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Message timeline */}

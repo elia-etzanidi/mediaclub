@@ -702,7 +702,7 @@ const ChatArea = ({
       {/* Emoji Picker Popover */}
       {showEmojiPicker && (
         <div className="emoji-picker-popover" ref={emojiPickerRef}>
-          <div className="emoji-picker-header">Pick an emoji</div>
+          <div className="emoji-picker-header">React & Emojis</div>
           <div className="emoji-grid">
             {PICKER_EMOJIS.map((emoji) => (
               <button

@@ -415,7 +415,7 @@
 
 /* --- Inline Spoiler Tag --- */
 .chat-spoiler {
-  background-color: #24292e;
+  background-color: var(--primary-dark);
   color: transparent;
   padding: 2px 6px;
   border-radius: 4px;
@@ -432,7 +432,7 @@
 }
 
 .chat-spoiler:not(.revealed):hover {
-  background-color: #2f363d;
+  background-color: #005955;
 }
 
 /* --- Floating Message Hover Actions --- */
@@ -727,30 +727,34 @@
 /* --- Emoji Picker Popover --- */
 .emoji-picker-popover {
   position: absolute;
-  bottom: 80px;
+  bottom: 100px;
   left: 20px;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0, 70, 67, 0.18);
-  width: 290px;
+  box-shadow: 0 10px 28px rgba(0, 70, 67, 0.18);
+  width: 320px;
+  max-width: calc(100vw - 40px);
   padding: 12px;
+  box-sizing: border-box;
   z-index: 50;
   animation: fadeInQuick 0.15s ease-out;
 }
 
 .emoji-picker-header {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--primary-dark);
-  margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .emoji-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -758,13 +762,15 @@
   background: none;
   border: none;
   font-size: 1.25rem;
-  padding: 6px;
+  padding: 4px;
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.1s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
 }
 
 .emoji-grid-btn:hover {
