@@ -8,23 +8,42 @@ const MembersSidebar = ({
   onStartDirectMessage,
   currentUser
 }) => {
+  // Deduplicate members list by id or username
+  const uniqueMembers = members.reduce((acc, m) => {
+    if (!m) return acc;
+    const memberId = m.id !== undefined && m.id !== null ? String(m.id) : null;
+    const memberName = (m.name || m.username || '').toLowerCase();
+    const key = memberId ? `id_${memberId}` : `name_${memberName}`;
+    if (!acc.seen.has(key)) {
+      acc.seen.add(key);
+      acc.list.push(m);
+    }
+    return acc;
+  }, { seen: new Set(), list: [] }).list;
+
   // Separate into moderators and regular members
   // If no member has role === 'moderator', designate the first member as moderator
-  const hasExplicitModerator = members.some((m) => m.role === 'moderator');
-  const moderators = members.filter(
-    (m, idx) => m.role === 'moderator' || (!hasExplicitModerator && idx === 0)
+  const hasExplicitModerator = uniqueMembers.some(
+    (m) => (m.role || '').toLowerCase() === 'moderator'
   );
-  const regularMembers = members.filter(
-    (m) => !moderators.some((mod) => (mod.id && m.id ? mod.id === m.id : mod.name === m.name))
+  const moderators = uniqueMembers.filter(
+    (m, idx) => (m.role || '').toLowerCase() === 'moderator' || (!hasExplicitModerator && idx === 0)
+  );
+  const regularMembers = uniqueMembers.filter(
+    (m) => !moderators.some((mod) => (
+      mod.id && m.id
+        ? String(mod.id) === String(m.id)
+        : (mod.name || mod.username || '').toLowerCase() === (m.name || m.username || '').toLowerCase()
+    ))
   );
 
   const currentUsername = (currentUser?.username || '').toLowerCase();
   const currentUserId = currentUser?.id;
 
   const isSelf = (member) => {
-    if (currentUserId && member.id && currentUserId === member.id) return true;
+    if (currentUserId && member.id && String(currentUserId) === String(member.id)) return true;
     const name = (member.name || member.username || '').toLowerCase();
-    return name === currentUsername;
+    return Boolean(currentUsername && name === currentUsername);
   };
 
   const getMemberStatus = (member) => {
@@ -47,12 +66,14 @@ const MembersSidebar = ({
   };
 
   const handleMemberClick = (member, role, statusInfo) => {
+    const displayName = member.name || member.username || 'Member';
+    const displayImg = member.img || member.avatarUrl || defaultAvatar;
     if (onOpenUserCard) {
       onOpenUserCard({
         id: member.id,
-        name: member.name,
-        username: member.name,
-        avatarUrl: member.img,
+        name: displayName,
+        username: member.username || displayName,
+        avatarUrl: displayImg,
         role: role,
         status: statusInfo?.label || 'Online'
       });
@@ -61,12 +82,14 @@ const MembersSidebar = ({
 
   const handleQuickMessage = (e, member) => {
     e.stopPropagation();
+    const displayName = member.name || member.username || 'Member';
+    const displayImg = member.img || member.avatarUrl || defaultAvatar;
     if (onStartDirectMessage) {
       onStartDirectMessage({
         id: member.id,
-        name: member.name,
-        username: member.name,
-        avatarUrl: member.img
+        name: displayName,
+        username: member.username || displayName,
+        avatarUrl: displayImg
       });
     }
   };
@@ -75,16 +98,18 @@ const MembersSidebar = ({
     const isCurrentUser = isSelf(member);
     const statusInfo = getMemberStatus(member);
     const { isOnline, label: statusLabel } = statusInfo;
+    const displayName = member.name || member.username || 'Member';
+    const displayImg = member.img || member.avatarUrl || defaultAvatar;
 
     return (
       <div
-        key={member.id || member.name}
+        key={member.id ? String(member.id) : displayName}
         className={`member-cell ${role === 'moderator' ? 'moderator-cell' : ''}`}
         onClick={() => handleMemberClick(member, role, statusInfo)}
         role="button"
         tabIndex={0}
-        title={`${member.name} • ${isCurrentUser ? 'Online (You)' : statusLabel}`}
-        aria-label={`${member.name}, ${role === 'moderator' ? 'Moderator' : 'Member'}, ${isCurrentUser ? 'Online (You)' : statusLabel}`}
+        title={`${displayName} • ${isCurrentUser ? 'Online (You)' : statusLabel}`}
+        aria-label={`${displayName}, ${role === 'moderator' ? 'Moderator' : 'Member'}, ${isCurrentUser ? 'Online (You)' : statusLabel}`}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -94,8 +119,8 @@ const MembersSidebar = ({
       >
         <div className="member-avatar-wrap">
           <img
-            src={member.img || defaultAvatar}
-            alt={member.name}
+            src={displayImg}
+            alt={displayName}
             className="member-image"
             onError={(e) => {
               e.target.onerror = null;
@@ -110,7 +135,7 @@ const MembersSidebar = ({
         </div>
         <div className="member-info">
           <span className={`member-name ${role === 'moderator' ? 'moderator-name' : ''}`}>
-            {member.name}
+            {displayName}
           </span>
         </div>
 
@@ -120,8 +145,8 @@ const MembersSidebar = ({
             type="button"
             className="member-quick-msg-btn"
             onClick={(e) => handleQuickMessage(e, member)}
-            title={`Message ${member.name}`}
-            aria-label={`Message ${member.name}`}
+            title={`Message ${displayName}`}
+            aria-label={`Message ${displayName}`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -145,7 +170,7 @@ const MembersSidebar = ({
       {/* Sidebar Header / Close Bar */}
       <div className="members-sidebar-header">
         <span className="members-sidebar-heading">
-          Members ({members.length})
+          Members ({uniqueMembers.length})
         </span>
         {onClose && (
           <button

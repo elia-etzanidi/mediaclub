@@ -20,7 +20,8 @@ import {
   fetchAllClubsApi,
   joinClubApi,
   createClubApi,
-  leaveClubApi
+  leaveClubApi,
+  fetchClubMembersApi
 } from '../../services/clubService';
 import { fetchConversationsApi } from '../../services/directMessageService';
 import defaultAvatar from '../../assets/default-avatar.png';
@@ -208,6 +209,25 @@ const HomePage = () => {
   // Active club: selectedClubId if found in clubs, else first club
   const activeClub = clubs.find((c) => c.id === selectedClubId) || clubs[0];
 
+  // Sync active club's latest members from backend to ensure right panel is always accurate
+  useEffect(() => {
+    if (!activeClub?.id || typeof activeClub.id !== 'number') return;
+    let isMounted = true;
+    fetchClubMembersApi(activeClub.id).then((freshMembers) => {
+      if (isMounted && Array.isArray(freshMembers) && freshMembers.length > 0) {
+        setClubs((prev) =>
+          prev.map((c) => (c.id === activeClub.id ? { ...c, members: freshMembers, memberCount: freshMembers.length } : c))
+        );
+        setSystemClubs((prev) =>
+          prev.map((c) => (c.id === activeClub.id ? { ...c, members: freshMembers, memberCount: freshMembers.length } : c))
+        );
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [activeClub?.id]);
+
   // Active person: selectedPersonId (the last chat the user had open) or first person
   const activePerson = people.find((p) => p.id === selectedPersonId) || people[0];
 
@@ -303,12 +323,29 @@ const HomePage = () => {
 
   // Join an existing club found through search
   const handleJoinClub = async (item) => {
+    const itemName = (item.title || item.name || '').toLowerCase();
     let targetClub = systemClubs.find(
-      (c) => c.name.toLowerCase() === item.title.toLowerCase()
+      (c) => c.name.toLowerCase() === itemName
     );
+
+    const currentUserMember = {
+      id: user?.id || 1,
+      name: user?.username || 'Member',
+      username: user?.username || 'Member',
+      img: user?.pfp || user?.avatarUrl || defaultAvatar,
+      role: 'member'
+    };
 
     if (targetClub && typeof targetClub.id === 'number') {
       await joinClubApi(targetClub.id);
+      const freshMembers = await fetchClubMembersApi(targetClub.id);
+      if (Array.isArray(freshMembers) && freshMembers.length > 0) {
+        targetClub = {
+          ...targetClub,
+          members: freshMembers,
+          memberCount: freshMembers.length
+        };
+      }
     } else if (!targetClub) {
       const created = await createClubApi(item);
       if (created) {
@@ -319,7 +356,7 @@ const HomePage = () => {
     if (!targetClub) {
       targetClub = {
         id: Date.now(),
-        name: item.title,
+        name: item.title || item.name,
         mediaType: item.type || item.mediaType || 'movies',
         externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
         externalId: item.externalId || String(item.id),
@@ -340,31 +377,42 @@ const HomePage = () => {
           { id: 3, name: 'reviews', type: 'text' },
           { id: 4, name: 'requests', type: 'text' }
         ],
-        members: [{ id: user.id || 1, name: user.username, img: user.pfp, role: 'moderator' }],
+        members: [{ ...currentUserMember, role: 'moderator' }],
         mediaDetails: item.mediaDetails || null
       };
       setSystemClubs((prev) => [...prev, targetClub]);
     } else {
-      const isMember = targetClub.members?.some((m) => m.name === user.username);
-      if (!isMember) {
+      const existingMembers = targetClub.members || [];
+      const alreadyIn = existingMembers.some(
+        (m) =>
+          (m.id && user?.id && String(m.id) === String(user.id)) ||
+          (m.name || m.username || '').toLowerCase() === (user?.username || '').toLowerCase()
+      );
+      if (!alreadyIn) {
+        const updatedMembers = [...existingMembers, currentUserMember];
         targetClub = {
           ...targetClub,
-          members: [
-            ...(targetClub.members || []),
-            { id: user.id || 1, name: user.username, img: user.pfp, role: 'member' }
-          ]
+          members: updatedMembers,
+          memberCount: updatedMembers.length
         };
-        setSystemClubs((prev) =>
-          prev.map((c) => (c.id === targetClub.id ? targetClub : c))
-        );
       }
+      setSystemClubs((prev) =>
+        prev.map((c) => (c.id === targetClub.id ? targetClub : c))
+      );
     }
 
     setClubs((prev) => {
       const alreadyJoined = prev.some(
-        (c) => c.name.toLowerCase() === targetClub.name.toLowerCase()
+        (c) => c.id === targetClub.id || c.name.toLowerCase() === targetClub.name.toLowerCase()
       );
-      return alreadyJoined ? prev : [...prev, targetClub];
+      if (alreadyJoined) {
+        return prev.map((c) =>
+          (c.id === targetClub.id || c.name.toLowerCase() === targetClub.name.toLowerCase())
+            ? targetClub
+            : c
+        );
+      }
+      return [...prev, targetClub];
     });
 
     setActiveTab('clubs');
@@ -377,8 +425,9 @@ const HomePage = () => {
 
   // Trigger creation flow by prompting user with moderator explanation popup
   const handleCreateClub = (item) => {
+    const itemName = (item.title || item.name || '').toLowerCase();
     const existing = systemClubs.find(
-      (c) => c.name.toLowerCase() === item.title.toLowerCase()
+      (c) => c.name.toLowerCase() === itemName
     );
     if (existing) {
       handleJoinClub(item);
@@ -392,8 +441,9 @@ const HomePage = () => {
   const handleConfirmCreateClub = async (item) => {
     if (!item) return;
 
+    const itemName = (item.title || item.name || '').toLowerCase();
     const existing = systemClubs.find(
-      (c) => c.name.toLowerCase() === item.title.toLowerCase()
+      (c) => c.name.toLowerCase() === itemName
     );
     if (existing) {
       await handleJoinClub(item);
@@ -401,10 +451,23 @@ const HomePage = () => {
       return;
     }
 
+    const currentUserMod = {
+      id: user?.id || 1,
+      name: user?.username || 'Moderator',
+      username: user?.username || 'Moderator',
+      img: user?.pfp || user?.avatarUrl || defaultAvatar,
+      role: 'moderator'
+    };
+
     const createdClub = await createClubApi(item);
-    const newClub = createdClub || {
+    const newClub = createdClub ? {
+      ...createdClub,
+      members: (createdClub.members && createdClub.members.length > 0)
+        ? createdClub.members
+        : [currentUserMod]
+    } : {
       id: Date.now(),
-      name: item.title, // Predetermined by the media API title
+      name: item.title || item.name,
       mediaType: item.type || item.mediaType || 'movies',
       externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
       externalId: item.externalId || String(item.id),
@@ -425,9 +488,7 @@ const HomePage = () => {
         { id: 3, name: 'reviews', type: 'text' },
         { id: 4, name: 'requests', type: 'text' }
       ],
-      members: [
-        { id: user.id || 1, name: user.username, img: user.pfp, role: 'moderator' }
-      ],
+      members: [currentUserMod],
       mediaDetails: item.mediaDetails || null
     };
 
@@ -458,6 +519,17 @@ const HomePage = () => {
     if (typeof clubId === 'number') {
       leaveClubApi(clubId);
     }
+    setSystemClubs((prev) =>
+      prev.map((c) => {
+        if (c.id === clubId) {
+          const updatedMembers = (c.members || []).filter(
+            (m) => !(m.id && user?.id ? String(m.id) === String(user.id) : (m.name || '').toLowerCase() === (user?.username || '').toLowerCase())
+          );
+          return { ...c, members: updatedMembers, memberCount: updatedMembers.length };
+        }
+        return c;
+      })
+    );
     setClubs((prev) => {
       const remaining = prev.filter((c) => c.id !== clubId);
       if (remaining.length > 0) {

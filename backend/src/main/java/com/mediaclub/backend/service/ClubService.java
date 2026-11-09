@@ -72,16 +72,16 @@ public class ClubService {
                 .club(club)
                 .role(MembershipRole.MODERATOR)
                 .build();
-        membershipRepository.save(founderMembership);
+        founderMembership = membershipRepository.save(founderMembership);
 
-        return ClubResponse.from(club, channels, 1);
+        return ClubResponse.from(club, channels, List.of(founderMembership));
     }
 
     public ClubResponse getClub(Long clubId) {
         Club club = getClubOrThrow(clubId);
         List<Channel> channels = channelRepository.findByClubId(clubId);
-        int memberCount = membershipRepository.findByClubId(clubId).size();
-        return ClubResponse.from(club, channels, memberCount);
+        List<Membership> memberships = membershipRepository.findByClubId(clubId);
+        return ClubResponse.from(club, channels, memberships);
     }
 
     public List<ClubResponse> getMyClubs(Long userId) {
@@ -89,16 +89,16 @@ public class ClubService {
         return memberships.stream().map(m -> {
             Club club = m.getClub();
             List<Channel> channels = channelRepository.findByClubId(club.getId());
-            int memberCount = membershipRepository.findByClubId(club.getId()).size();
-            return ClubResponse.from(club, channels, memberCount);
+            List<Membership> clubMemberships = membershipRepository.findByClubId(club.getId());
+            return ClubResponse.from(club, channels, clubMemberships);
         }).toList();
     }
 
     public List<ClubResponse> getAllClubs() {
         return clubRepository.findAll().stream().map(club -> {
             List<Channel> channels = channelRepository.findByClubId(club.getId());
-            int memberCount = membershipRepository.findByClubId(club.getId()).size();
-            return ClubResponse.from(club, channels, memberCount);
+            List<Membership> clubMemberships = membershipRepository.findByClubId(club.getId());
+            return ClubResponse.from(club, channels, clubMemberships);
         }).toList();
     }
 
@@ -107,7 +107,9 @@ public class ClubService {
         Club club = getClubOrThrow(clubId);
 
         if (membershipRepository.existsByUserIdAndClubId(userId, clubId)) {
-            throw new BadRequestException("You are already a member of this club");
+            Membership existing = membershipRepository.findByUserIdAndClubId(userId, clubId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Membership not found"));
+            return MembershipResponse.from(existing);
         }
 
         User user = userRepository.findById(userId)
