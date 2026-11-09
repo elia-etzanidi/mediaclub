@@ -24,6 +24,7 @@ import {
   fetchClubMembersApi
 } from '../../services/clubService';
 import { fetchConversationsApi } from '../../services/directMessageService';
+import websocketService from '../../services/websocketService';
 import defaultAvatar from '../../assets/default-avatar.png';
 
 const getClubsKey = (uid) => `mediaclub_${uid || 'guest'}_joined_clubs`;
@@ -157,6 +158,8 @@ const HomePage = () => {
     const activeToken = getToken();
     if (!activeToken) return;
 
+    websocketService.connect();
+
     getUserProfile().then((profile) => {
       if (profile) {
         setUser((prev) => ({
@@ -180,6 +183,32 @@ const HomePage = () => {
         }
       }
     });
+
+    const handleSyncOnFocus = () => {
+      const token = getToken();
+      if (!token) return;
+
+      websocketService.connect();
+
+      fetchMyClubsApi().then((freshClubs) => {
+        if (Array.isArray(freshClubs)) {
+          setClubs(freshClubs);
+        }
+      });
+    };
+
+    window.addEventListener('focus', handleSyncOnFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handleSyncOnFocus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleSyncOnFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
 
     fetchAllClubsApi().then((allClubs) => {
       if (Array.isArray(allClubs) && allClubs.length > 0) {
@@ -215,12 +244,27 @@ const HomePage = () => {
     let isMounted = true;
     fetchClubMembersApi(activeClub.id).then((freshMembers) => {
       if (isMounted && Array.isArray(freshMembers) && freshMembers.length > 0) {
-        setClubs((prev) =>
-          prev.map((c) => (c.id === activeClub.id ? { ...c, members: freshMembers, memberCount: freshMembers.length } : c))
-        );
-        setSystemClubs((prev) =>
-          prev.map((c) => (c.id === activeClub.id ? { ...c, members: freshMembers, memberCount: freshMembers.length } : c))
-        );
+        const updateClubMembers = (c) => {
+          if (c.id !== activeClub.id) return c;
+          const existingMembers = c.members || [];
+          const mergedMembers = freshMembers.map((fm) => {
+            const existing = existingMembers.find(
+              (em) =>
+                (em.id && fm.id && String(em.id) === String(fm.id)) ||
+                ((em.username || '').toLowerCase() === (fm.username || '').toLowerCase())
+            );
+            const isOnline = fm.isOnline || Boolean(existing?.isOnline);
+            return {
+              ...fm,
+              isOnline,
+              status: isOnline ? 'Online' : 'Offline'
+            };
+          });
+          return { ...c, members: mergedMembers, memberCount: mergedMembers.length };
+        };
+
+        setClubs((prev) => prev.map(updateClubMembers));
+        setSystemClubs((prev) => prev.map(updateClubMembers));
       }
     });
     return () => {
@@ -333,7 +377,9 @@ const HomePage = () => {
       name: user?.username || 'Member',
       username: user?.username || 'Member',
       img: user?.pfp || user?.avatarUrl || defaultAvatar,
-      role: 'member'
+      role: 'member',
+      status: 'Online',
+      isOnline: true
     };
 
     if (targetClub && typeof targetClub.id === 'number') {

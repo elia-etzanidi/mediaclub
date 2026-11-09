@@ -22,6 +22,17 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final com.mediaclub.backend.config.PresenceEventListener presenceEventListener;
+
+    public void logout(String token) {
+        if (token != null && !token.isBlank()) {
+            try {
+                String username = jwtUtil.extractUsername(token);
+                userRepository.findByUsername(username).ifPresent(user -> presenceEventListener.setUserOffline(user.getId()));
+            } catch (Exception ignored) {
+            }
+        }
+    }
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -37,10 +48,11 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .avatarUrl("/default-avatar.png")
                 .isGlobalAdmin(false)
-                .status(User.UserStatus.OFFLINE)
+                .status(User.UserStatus.ONLINE)
                 .build();
 
         user = userRepository.save(user);
+        presenceEventListener.setUserOnline(user.getId());
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getId());
         return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getAvatarUrl());
@@ -60,6 +72,7 @@ public class AuthService {
                 .orElseThrow(() -> new BadRequestException("Invalid username or password"));
 
         String token = jwtUtil.generateToken(user.getUsername(), user.getId());
+        presenceEventListener.setUserOnline(user.getId());
         return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail(), user.getAvatarUrl());
     }
 }

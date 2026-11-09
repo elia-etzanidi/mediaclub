@@ -340,6 +340,11 @@
   background-color: #22c55e;
   border: 2px solid var(--bg-sidebar);
   border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.cell-online-dot.is-offline {
+  background-color: #6b7280;
 }
 
 .cell-info-wrap {

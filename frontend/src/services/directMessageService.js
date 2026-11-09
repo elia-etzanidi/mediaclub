@@ -99,14 +99,22 @@ export const fetchConversationsApi = async () => {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        return data.map((conv) => ({
-          id: conv.otherUserId,
-          conversationId: conv.id,
-          name: conv.otherUsername,
-          username: conv.otherUsername,
-          img: conv.otherAvatarUrl || defaultAvatar,
-          role: 'member'
-        }));
+        return data.map((conv) => {
+          const isOnline =
+            conv.otherStatus === 'ONLINE' ||
+            conv.otherStatus === 'Online' ||
+            conv.isOnline === true;
+          return {
+            id: conv.otherUserId,
+            conversationId: conv.id,
+            name: conv.otherUsername,
+            username: conv.otherUsername,
+            img: conv.otherAvatarUrl || defaultAvatar,
+            role: 'member',
+            status: isOnline ? 'Online' : 'Offline',
+            isOnline
+          };
+        });
       }
     }
   } catch (err) {

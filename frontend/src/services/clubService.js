@@ -35,14 +35,19 @@ export const normalizeClub = (club) => {
     genre: club.genre || '',
     author: club.author || '',
     channels,
-    members: (club.members || []).map((m) => ({
-      id: m.id || m.userId,
-      name: m.name || m.username,
-      username: m.username || m.name,
-      img: m.img || m.avatarUrl || defaultAvatar,
-      avatarUrl: m.avatarUrl || m.img || defaultAvatar,
-      role: (m.role || 'member').toLowerCase()
-    })),
+    members: (club.members || []).map((m) => {
+      const isOnline = m.status === 'ONLINE' || m.status === 'Online' || m.isOnline === true;
+      return {
+        id: m.id || m.userId,
+        name: m.name || m.username,
+        username: m.username || m.name,
+        img: m.img || m.avatarUrl || defaultAvatar,
+        avatarUrl: m.avatarUrl || m.img || defaultAvatar,
+        role: (m.role || 'member').toLowerCase(),
+        status: isOnline ? 'Online' : 'Offline',
+        isOnline
+      };
+    }),
     memberCount: club.memberCount || club.members?.length || 1,
     mediaDetails: club.mediaDetails || null
   };
@@ -105,14 +110,19 @@ export const fetchClubMembersApi = async (clubId) => {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        return data.map((m) => ({
-          id: m.userId || m.id,
-          name: m.username || m.name,
-          username: m.username || m.name,
-          img: m.avatarUrl || m.img || defaultAvatar,
-          avatarUrl: m.avatarUrl || m.img || defaultAvatar,
-          role: (m.role || 'member').toLowerCase()
-        }));
+        return data.map((m) => {
+          const isOnline = m.status === 'ONLINE' || m.status === 'Online' || m.isOnline === true;
+          return {
+            id: m.userId || m.id,
+            name: m.username || m.name,
+            username: m.username || m.name,
+            img: m.avatarUrl || m.img || defaultAvatar,
+            avatarUrl: m.avatarUrl || m.img || defaultAvatar,
+            role: (m.role || 'member').toLowerCase(),
+            status: isOnline ? 'Online' : 'Offline',
+            isOnline
+          };
+        });
       }
     }
   } catch (err) {

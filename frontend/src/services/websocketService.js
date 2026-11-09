@@ -11,6 +11,7 @@ class WebSocketService {
     this.client = null;
     this.connected = false;
     this.channelSubscriptions = new Map(); // channelId -> Set of callback objects { onMessage, onReaction, onDelete, onTyping }
+    this.clubPresenceSubscriptions = new Map(); // clubId -> Set of callbacks (presenceEvent) => void
     this.stompSubscriptions = new Map(); // key -> stompSubscription
     this.pendingConnect = null;
   }
@@ -40,14 +41,22 @@ class WebSocketService {
         connectHeaders: {
           Authorization: `Bearer ${token}`
         },
+        beforeConnect: () => {
+          const currentToken = this.getToken();
+          if (currentToken && this.client) {
+            this.client.connectHeaders = {
+              Authorization: `Bearer ${currentToken}`
+            };
+          }
+        },
         reconnectDelay: 3000,
         heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
         onConnect: () => {
           this.connected = true;
           this.pendingConnect = null;
-          // Re-subscribe all active channel listeners
-          this.resubscribeAllChannels();
+          // Re-subscribe all active channel & club presence listeners
+          this.resubscribeAll();
           resolve(this.client);
         },
         onStompError: (frame) => {
@@ -80,6 +89,7 @@ class WebSocketService {
       this.client = null;
       this.connected = false;
       this.channelSubscriptions.clear();
+      this.clubPresenceSubscriptions.clear();
       this.stompSubscriptions.clear();
       this.pendingConnect = null;
     }
@@ -218,10 +228,86 @@ class WebSocketService {
     });
   }
 
-  resubscribeAllChannels() {
+  resubscribeAll() {
     this.stompSubscriptions.clear();
     for (const chId of this.channelSubscriptions.keys()) {
       this.setupStompSubscriptions(chId);
+    }
+    for (const clubId of this.clubPresenceSubscriptions.keys()) {
+      this.setupClubPresenceSubscription(clubId);
+    }
+  }
+
+  resubscribeAllChannels() {
+    this.resubscribeAll();
+  }
+
+  // Subscribe to club presence events (online/offline status changes)
+  subscribeToClubPresence(clubId, callback) {
+    if (!clubId || typeof callback !== 'function') return () => {};
+
+    const cId = Number(clubId);
+    if (!this.clubPresenceSubscriptions.has(cId)) {
+      this.clubPresenceSubscriptions.set(cId, new Set());
+    }
+    const listenerSet = this.clubPresenceSubscriptions.get(cId);
+    listenerSet.add(callback);
+
+    if (this.connected && this.client) {
+      this.setupClubPresenceSubscription(cId);
+    } else {
+      this.connect();
+    }
+
+    // Return unsubscribe cleanup function
+    return () => {
+      const set = this.clubPresenceSubscriptions.get(cId);
+      if (set) {
+        set.delete(callback);
+        if (set.size === 0) {
+          this.clubPresenceSubscriptions.delete(cId);
+          const key = `presence_${cId}`;
+          const sub = this.stompSubscriptions.get(key);
+          if (sub) {
+            try {
+              sub.unsubscribe();
+            } catch {
+              // Ignore unsubscribe error
+            }
+            this.stompSubscriptions.delete(key);
+          }
+        }
+      }
+    };
+  }
+
+  setupClubPresenceSubscription(cId) {
+    if (!this.client || !this.connected) return;
+
+    const key = `presence_${cId}`;
+    if (!this.stompSubscriptions.has(key)) {
+      try {
+        const sub = this.client.subscribe(`/topic/club/${cId}/presence`, (frame) => {
+          try {
+            const data = JSON.parse(frame.body);
+            const listeners = this.clubPresenceSubscriptions.get(cId);
+            if (listeners) {
+              listeners.forEach((cb) => {
+                try {
+                  cb(data);
+                } catch (e) {
+                  console.error('Error running presence callback:', e);
+                }
+              });
+            }
+          } catch (e) {
+            console.error('Error parsing presence frame:', e);
+          }
+        });
+        this.stompSubscriptions.set(key, sub);
+      } catch (e) {
+        console.warn('Failed to subscribe to club presence topic:', e);
+      }
     }
   }
 

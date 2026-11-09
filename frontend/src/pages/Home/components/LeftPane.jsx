@@ -100,7 +100,14 @@ const LeftPane = ({
                     }}
                   />
                   {activeTab === 'people' && (
-                    <span className="cell-online-dot" aria-hidden="true" />
+                    <span
+                      className={`cell-online-dot ${
+                        item.isOnline || (item.status && item.status.toLowerCase().includes('online'))
+                          ? 'is-online'
+                          : 'is-offline'
+                      }`}
+                      aria-hidden="true"
+                    />
                   )}
                 </div>
 

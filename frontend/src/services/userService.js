@@ -149,6 +149,13 @@ export const fetchUserAccountDetails = async (inputUser, club = null, currentUse
       ? [clubName]
       : ['MediaClub'];
 
+  const memberStatus =
+    backendData?.status ||
+    inputUser.status ||
+    (inputUser.isOnline !== undefined ? (inputUser.isOnline ? 'Online' : 'Offline') : null) ||
+    preset?.status ||
+    'Offline';
+
   return {
     id: backendData?.id || rawId || normalizedKey,
     username: backendData?.username || preset?.username || rawName,
@@ -157,7 +164,7 @@ export const fetchUserAccountDetails = async (inputUser, club = null, currentUse
     avatarUrl: effectiveAvatar,
     role: rawRole,
     createdAt: formatDate(backendData?.createdAt || preset?.createdAt || 'January 2024'),
-    status: preset?.status || 'Online',
+    status: memberStatus,
     bio: backendData?.bio || preset?.bio || null,
     clubs: userClubs,
     isCurrentUser: false

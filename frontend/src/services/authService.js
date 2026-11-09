@@ -165,6 +165,19 @@ export const getUserProfile = async () => {
 
 export const getToken = () => localStorage.getItem('token');
 
-export const logoutUser = () => {
+export const logoutUser = async () => {
+  const token = getToken();
+  if (token) {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+    } catch {
+      // Ignore network errors on logout
+    }
+  }
   clearLocalSession();
 };

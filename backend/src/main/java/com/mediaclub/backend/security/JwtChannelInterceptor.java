@@ -12,11 +12,20 @@ import org.springframework.stereotype.Component;
 
 
 @Component
-@RequiredArgsConstructor
 public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
+    private final com.mediaclub.backend.config.PresenceEventListener presenceEventListener;
+
+    public JwtChannelInterceptor(
+            JwtUtil jwtUtil,
+            CustomUserDetailsService userDetailsService,
+            @org.springframework.context.annotation.Lazy com.mediaclub.backend.config.PresenceEventListener presenceEventListener) {
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+        this.presenceEventListener = presenceEventListener;
+    }
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -38,6 +47,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     accessor.setUser(authToken);
+                    presenceEventListener.registerSession(accessor.getSessionId(), userDetails.getId());
                 }
             }
         }

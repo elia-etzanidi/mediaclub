@@ -118,6 +118,12 @@ const UserAccountModal = ({
     user?.role?.toLowerCase() === 'moderator';
 
   const isSelf = Boolean(profile?.isCurrentUser);
+  const isOnline = isSelf || (
+    user?.isOnline !== undefined
+      ? Boolean(user.isOnline)
+      : (profile?.status ? profile.status.toLowerCase().includes('online') : false)
+  );
+  const statusDisplay = isSelf ? 'Online (You)' : (isOnline ? 'Online' : 'Offline');
 
   return createPortal(
     <div
@@ -173,10 +179,10 @@ const UserAccountModal = ({
             />
             <span
               className={`user-card-status-badge ${
-                profile?.status?.toLowerCase().includes('online') ? 'status-online' : 'status-active'
+                isOnline ? 'status-online' : 'status-offline'
               }`}
-              title={profile?.status || 'Active'}
-              aria-label={profile?.status || 'Active'}
+              title={statusDisplay}
+              aria-label={statusDisplay}
             />
           </div>
         </div>
@@ -265,8 +271,8 @@ const UserAccountModal = ({
               <div className="user-detail-content">
                 <span className="user-detail-label">Status</span>
                 <span className="user-detail-value status-indicator-text">
-                  <span className="status-dot-pulse" aria-hidden="true" />
-                  {(profile?.status || 'Online').replace(/\s*\([Yy]ou\)/i, '')}
+                  <span className={`status-dot-pulse ${isOnline ? 'online' : 'offline'}`} aria-hidden="true" />
+                  {isSelf ? 'Online' : (isOnline ? 'Online' : 'Offline')}
                 </span>
               </div>
             </div>

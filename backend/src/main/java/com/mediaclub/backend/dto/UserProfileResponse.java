@@ -15,6 +15,8 @@ public class UserProfileResponse {
     private String email;
     private String avatarUrl;
     private Instant createdAt;
+    private User.UserStatus status;
+    private Instant lastSeen;
 
     public static UserProfileResponse from(User user) {
         return new UserProfileResponse(
@@ -22,7 +24,9 @@ public class UserProfileResponse {
                 user.getUsername(),
                 user.getEmail(),
                 user.getAvatarUrl(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getStatus(),
+                user.getLastSeen()
         );
     }
 }

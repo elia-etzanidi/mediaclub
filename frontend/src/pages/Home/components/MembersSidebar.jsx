@@ -49,20 +49,20 @@ const MembersSidebar = ({
   const getMemberStatus = (member) => {
     if (isSelf(member)) return { isOnline: true, label: 'Online' };
     if (member.isOnline !== undefined) {
+      const isOnline = Boolean(member.isOnline);
       return {
-        isOnline: Boolean(member.isOnline),
-        label: member.status || (member.isOnline ? 'Online' : 'Offline')
+        isOnline,
+        label: isOnline ? 'Online' : 'Offline'
       };
     }
     if (member.status) {
-      const isOffline = member.status.toLowerCase().includes('offline');
+      const isOnline = member.status.toLowerCase().includes('online');
       return {
-        isOnline: !isOffline,
-        label: member.status
+        isOnline,
+        label: isOnline ? 'Online' : 'Offline'
       };
     }
-    // Default to Online in this active club environment
-    return { isOnline: true, label: 'Online' };
+    return { isOnline: false, label: 'Offline' };
   };
 
   const handleMemberClick = (member, role, statusInfo) => {
@@ -75,7 +75,8 @@ const MembersSidebar = ({
         username: member.username || displayName,
         avatarUrl: displayImg,
         role: role,
-        status: statusInfo?.label || 'Online'
+        status: statusInfo?.label || (statusInfo?.isOnline ? 'Online' : 'Offline'),
+        isOnline: Boolean(statusInfo?.isOnline)
       });
     }
   };

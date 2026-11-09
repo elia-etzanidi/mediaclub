@@ -15,6 +15,7 @@ public class ConversationResponse {
     private Long otherUserId;
     private String otherUsername;
     private String otherAvatarUrl;
+    private User.UserStatus otherStatus;
     private Instant createdAt;
 
     public static ConversationResponse from(Conversation conversation, Long requestingUserId) {
@@ -27,6 +28,7 @@ public class ConversationResponse {
                 other.getId(),
                 other.getUsername(),
                 other.getAvatarUrl(),
+                other.getStatus() != null ? other.getStatus() : User.UserStatus.OFFLINE,
                 conversation.getCreatedAt()
         );
     }
