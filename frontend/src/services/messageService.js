@@ -207,7 +207,7 @@ export const fetchChannelMessages = async (club, channel) => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           // Normalize reactions and sender avatar
           const normalized = data.map((m) => ({
             id: m.id,
@@ -237,7 +237,7 @@ export const fetchChannelMessages = async (club, channel) => {
     const cached = localStorage.getItem(localKey);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -245,16 +245,18 @@ export const fetchChannelMessages = async (club, channel) => {
     console.warn('Error reading cached messages:', e);
   }
 
-  // Pre-seed mock messages if available for known clubs
-  const clubName = club.name || '';
-  const channelName = channel.name || '';
-  const seedList = SEED_MESSAGES[clubName]?.[channelName] || [];
+  // Pre-seed mock messages only if unauthenticated (demo guest mode)
+  if (!token) {
+    const clubName = club.name || '';
+    const channelName = channel.name || '';
+    const seedList = SEED_MESSAGES[clubName]?.[channelName] || [];
 
-  if (seedList.length > 0) {
-    try {
-      localStorage.setItem(localKey, JSON.stringify(seedList));
-    } catch (e) {}
-    return seedList;
+    if (seedList.length > 0) {
+      try {
+        localStorage.setItem(localKey, JSON.stringify(seedList));
+      } catch (e) {}
+      return seedList;
+    }
   }
 
   // Default empty channel

@@ -14,21 +14,51 @@ import {
   UserAccountModal,
   CreateClubModal
 } from './components';
-import { getCurrentUser, getUserProfile } from '../../services/authService';
+import { getCurrentUser, getUserProfile, getToken } from '../../services/authService';
+import {
+  fetchMyClubsApi,
+  fetchAllClubsApi,
+  joinClubApi,
+  createClubApi,
+  leaveClubApi
+} from '../../services/clubService';
+import { fetchConversationsApi } from '../../services/directMessageService';
 import defaultAvatar from '../../assets/default-avatar.png';
 
+const getClubsKey = (uid) => `mediaclub_${uid || 'guest'}_joined_clubs`;
+const getPeopleKey = (uid) => `mediaclub_${uid || 'guest'}_direct_messages_people`;
+const getLastClubKey = (uid) => `mediaclub_${uid || 'guest'}_last_selected_club_id`;
+const getLastPersonKey = (uid) => `mediaclub_${uid || 'guest'}_last_selected_person_id`;
+
 const HomePage = () => {
+  const savedUser = getCurrentUser();
+  const initialUserId = savedUser?.id || savedUser?.userId || 'guest';
+  const token = getToken();
+
+  const [user, setUser] = useState(() => {
+    return savedUser ? {
+      ...savedUser,
+      username: savedUser.username,
+      email: savedUser.email || `${savedUser.username.toLowerCase()}@example.com`,
+      pfp: savedUser.pfp || savedUser.avatarUrl || defaultAvatar,
+      createdAt: savedUser.createdAt || currentUser.createdAt
+    } : {
+      ...currentUser,
+      pfp: currentUser.pfp || defaultAvatar
+    };
+  });
+
   const [activeTab, setActiveTab] = useState('clubs');
   const [selectedClubId, setSelectedClubId] = useState(() => {
     try {
-      const saved = localStorage.getItem('mediaclub_last_selected_club_id');
+      const saved = localStorage.getItem(getLastClubKey(initialUserId));
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return null;
   });
   const [selectedPersonId, setSelectedPersonId] = useState(() => {
     try {
-      const saved = localStorage.getItem('mediaclub_last_selected_person_id');
+      const saved = localStorage.getItem(getLastPersonKey(initialUserId));
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return null;
@@ -37,10 +67,10 @@ const HomePage = () => {
   const [showMembers, setShowMembers] = useState(true);
   const [dmUpdateTick, setDmUpdateTick] = useState(0);
 
-  // Clubs state: defaults to saved clubs if available, or empty so new users see empty state
+  // Clubs state: user-scoped, defaults to empty for new authenticated accounts
   const [clubs, setClubs] = useState(() => {
     try {
-      const saved = localStorage.getItem('mediaclub_joined_clubs');
+      const saved = localStorage.getItem(getClubsKey(initialUserId));
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -53,10 +83,10 @@ const HomePage = () => {
   // System clubs: all clubs created in the platform (each media title has one and only one club)
   const [systemClubs, setSystemClubs] = useState(initialClubs);
 
-  // Direct message contacts state (persisted)
+  // Direct message contacts state (persisted per user)
   const [people, setPeople] = useState(() => {
     try {
-      const saved = localStorage.getItem('mediaclub_direct_messages_people');
+      const saved = localStorage.getItem(getPeopleKey(initialUserId));
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -64,7 +94,7 @@ const HomePage = () => {
     } catch (e) {
       console.warn('Error loading saved direct message people:', e);
     }
-    return initialPeople;
+    return token ? [] : initialPeople;
   });
 
   const [isStartDmModalOpen, setIsStartDmModalOpen] = useState(false);
@@ -72,35 +102,35 @@ const HomePage = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('mediaclub_joined_clubs', JSON.stringify(clubs));
+      localStorage.setItem(getClubsKey(user?.id), JSON.stringify(clubs));
     } catch (e) {
       console.warn('Error saving clubs:', e);
     }
-  }, [clubs]);
+  }, [clubs, user?.id]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('mediaclub_direct_messages_people', JSON.stringify(people));
+      localStorage.setItem(getPeopleKey(user?.id), JSON.stringify(people));
     } catch (e) {
       console.warn('Error saving direct message people:', e);
     }
-  }, [people]);
+  }, [people, user?.id]);
 
   useEffect(() => {
     if (selectedClubId) {
       try {
-        localStorage.setItem('mediaclub_last_selected_club_id', JSON.stringify(selectedClubId));
+        localStorage.setItem(getLastClubKey(user?.id), JSON.stringify(selectedClubId));
       } catch (e) {}
     }
-  }, [selectedClubId]);
+  }, [selectedClubId, user?.id]);
 
   useEffect(() => {
     if (selectedPersonId) {
       try {
-        localStorage.setItem('mediaclub_last_selected_person_id', JSON.stringify(selectedPersonId));
+        localStorage.setItem(getLastPersonKey(user?.id), JSON.stringify(selectedPersonId));
       } catch (e) {}
     }
-  }, [selectedPersonId]);
+  }, [selectedPersonId, user?.id]);
 
   // Ensure a chat is always selected when people exist
   useEffect(() => {
@@ -121,21 +151,11 @@ const HomePage = () => {
   const searchInputRef = useRef(null);
   const [pendingClubToCreate, setPendingClubToCreate] = useState(null);
 
-  const [user, setUser] = useState(() => {
-    const savedUser = getCurrentUser();
-    return savedUser ? {
-      ...savedUser,
-      username: savedUser.username,
-      email: savedUser.email || `${savedUser.username.toLowerCase()}@example.com`,
-      pfp: savedUser.pfp || savedUser.avatarUrl || defaultAvatar,
-      createdAt: savedUser.createdAt || currentUser.createdAt
-    } : {
-      ...currentUser,
-      pfp: currentUser.pfp || defaultAvatar
-    };
-  });
-
+  // Load user data, clubs from DB, system clubs from DB, and DM conversations
   useEffect(() => {
+    const activeToken = getToken();
+    if (!activeToken) return;
+
     getUserProfile().then((profile) => {
       if (profile) {
         setUser((prev) => ({
@@ -145,7 +165,41 @@ const HomePage = () => {
         }));
       }
     });
-  }, []);
+
+    fetchMyClubsApi().then((myClubs) => {
+      if (Array.isArray(myClubs)) {
+        setClubs(myClubs);
+        if (myClubs.length > 0) {
+          setSelectedClubId((prevId) => {
+            const exists = myClubs.some((c) => c.id === prevId);
+            return exists ? prevId : myClubs[0].id;
+          });
+        } else {
+          setSelectedClubId(null);
+        }
+      }
+    });
+
+    fetchAllClubsApi().then((allClubs) => {
+      if (Array.isArray(allClubs) && allClubs.length > 0) {
+        setSystemClubs(allClubs);
+      }
+    });
+
+    fetchConversationsApi().then((convs) => {
+      if (Array.isArray(convs)) {
+        setPeople(convs);
+        if (convs.length > 0) {
+          setSelectedPersonId((prevId) => {
+            const exists = convs.some((p) => p.id === prevId);
+            return exists ? prevId : convs[0].id;
+          });
+        } else {
+          setSelectedPersonId(null);
+        }
+      }
+    });
+  }, [user?.id]);
 
   const handleUpdateUser = (updatedFields) => {
     setUser((prev) => ({ ...prev, ...updatedFields }));
@@ -248,10 +302,19 @@ const HomePage = () => {
 
 
   // Join an existing club found through search
-  const handleJoinClub = (item) => {
+  const handleJoinClub = async (item) => {
     let targetClub = systemClubs.find(
       (c) => c.name.toLowerCase() === item.title.toLowerCase()
     );
+
+    if (targetClub && typeof targetClub.id === 'number') {
+      await joinClubApi(targetClub.id);
+    } else if (!targetClub) {
+      const created = await createClubApi(item);
+      if (created) {
+        targetClub = created;
+      }
+    }
 
     if (!targetClub) {
       targetClub = {
@@ -326,19 +389,20 @@ const HomePage = () => {
   };
 
   // Finalize club creation after user confirms in the moderator popup
-  const handleConfirmCreateClub = (item) => {
+  const handleConfirmCreateClub = async (item) => {
     if (!item) return;
 
     const existing = systemClubs.find(
       (c) => c.name.toLowerCase() === item.title.toLowerCase()
     );
     if (existing) {
-      handleJoinClub(item);
+      await handleJoinClub(item);
       setPendingClubToCreate(null);
       return;
     }
 
-    const newClub = {
+    const createdClub = await createClubApi(item);
+    const newClub = createdClub || {
       id: Date.now(),
       name: item.title, // Predetermined by the media API title
       mediaType: item.type || item.mediaType || 'movies',
@@ -391,6 +455,9 @@ const HomePage = () => {
 
   // Leave club handler
   const handleLeaveClub = (clubId) => {
+    if (typeof clubId === 'number') {
+      leaveClubApi(clubId);
+    }
     setClubs((prev) => {
       const remaining = prev.filter((c) => c.id !== clubId);
       if (remaining.length > 0) {

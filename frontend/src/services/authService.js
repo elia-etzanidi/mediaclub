@@ -1,6 +1,25 @@
 // Authentication API Service
 
+export const clearLocalSession = () => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('mediaclub_') || key === 'token' || key === 'user')) {
+        if (key === 'tmdb_api_key') continue;
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (e) {
+    console.warn('Error clearing local session:', e);
+  }
+};
+
 export const registerUser = async ({ username, email, password }) => {
+  // Clear any leftover data from a previous session so new accounts start fresh
+  clearLocalSession();
+
   const response = await fetch('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -12,6 +31,9 @@ export const registerUser = async ({ username, email, password }) => {
     throw new Error(data.error || 'Registration failed');
   }
 
+  if (data.token) {
+    localStorage.setItem('token', data.token);
+  }
   const avatar = data.avatarUrl || '/default-avatar.png';
   localStorage.setItem('user', JSON.stringify({
     id: data.userId,
@@ -34,6 +56,12 @@ export const loginUser = async ({ username, password }) => {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || 'Invalid credentials');
+  }
+
+  // Clear previous session if switching accounts
+  const prevUser = getCurrentUser();
+  if (prevUser && prevUser.id !== data.userId) {
+    clearLocalSession();
   }
 
   localStorage.setItem('token', data.token);
@@ -135,6 +163,5 @@ export const getUserProfile = async () => {
 export const getToken = () => localStorage.getItem('token');
 
 export const logoutUser = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  clearLocalSession();
 };

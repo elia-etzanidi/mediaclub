@@ -24,6 +24,17 @@ public class ClubController {
         return ResponseEntity.ok(clubService.createClub(request, userId));
     }
 
+    @GetMapping("/my")
+    public ResponseEntity<List<ClubResponse>> getMyClubs() {
+        Long userId = currentUserProvider.getCurrentUserId();
+        return ResponseEntity.ok(clubService.getMyClubs(userId));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ClubResponse>> getAllClubs() {
+        return ResponseEntity.ok(clubService.getAllClubs());
+    }
+
     @GetMapping("/{clubId}")
     public ResponseEntity<ClubResponse> getClub(@PathVariable Long clubId) {
         return ResponseEntity.ok(clubService.getClub(clubId));

@@ -74,10 +74,45 @@ const DEMO_RESPONSES = {
   ]
 };
 
-const getDmStorageKey = (person) => {
+import { getCurrentUser } from './authService';
+
+const getDmStorageKey = (person, currentUserId) => {
   if (!person) return `${DM_STORAGE_PREFIX}default`;
   const nameKey = (person.name || person.username || String(person.id)).trim().toLowerCase().replace(/\s+/g, '_');
-  return `${DM_STORAGE_PREFIX}${nameKey}`;
+  const uId = currentUserId || getCurrentUser()?.id || 'guest';
+  return `${DM_STORAGE_PREFIX}u${uId}_${nameKey}`;
+};
+
+/**
+ * Fetch DM conversation list from backend
+ */
+export const fetchConversationsApi = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+
+  try {
+    const res = await fetch('/api/dms', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return data.map((conv) => ({
+          id: conv.otherUserId,
+          conversationId: conv.id,
+          name: conv.otherUsername,
+          username: conv.otherUsername,
+          img: conv.otherAvatarUrl || defaultAvatar,
+          role: 'member'
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('Backend fetchConversationsApi failed:', err);
+  }
+  return null;
 };
 
 /**
@@ -100,7 +135,7 @@ export const fetchDirectMessages = async (person, currentUser) => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const normalized = data.map((m) => ({
             id: m.id,
             conversationId: m.conversationId,
@@ -115,7 +150,7 @@ export const fetchDirectMessages = async (person, currentUser) => {
           }));
 
           // Cache locally
-          localStorage.setItem(getDmStorageKey(person), JSON.stringify(normalized));
+          localStorage.setItem(getDmStorageKey(person, currentUser?.id), JSON.stringify(normalized));
           return normalized;
         }
       }
@@ -125,12 +160,12 @@ export const fetchDirectMessages = async (person, currentUser) => {
   }
 
   // Local storage lookup
-  const key = getDmStorageKey(person);
+  const key = getDmStorageKey(person, currentUser?.id);
   try {
     const cached = localStorage.getItem(key);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -138,14 +173,16 @@ export const fetchDirectMessages = async (person, currentUser) => {
     console.warn('Error reading cached direct messages:', e);
   }
 
-  // Seeded mock messages if available
-  const personName = person.name || person.username || '';
-  const seedList = SEED_DM_CONVERSATIONS[personName] || [];
-  if (seedList.length > 0) {
-    try {
-      localStorage.setItem(key, JSON.stringify(seedList));
-    } catch (e) {}
-    return seedList;
+  // Seeded mock messages only if unauthenticated / guest demo
+  if (!token) {
+    const personName = person.name || person.username || '';
+    const seedList = SEED_DM_CONVERSATIONS[personName] || [];
+    if (seedList.length > 0) {
+      try {
+        localStorage.setItem(key, JSON.stringify(seedList));
+      } catch (e) {}
+      return seedList;
+    }
   }
 
   return [];

@@ -84,6 +84,24 @@ public class ClubService {
         return ClubResponse.from(club, channels, memberCount);
     }
 
+    public List<ClubResponse> getMyClubs(Long userId) {
+        List<Membership> memberships = membershipRepository.findByUserId(userId);
+        return memberships.stream().map(m -> {
+            Club club = m.getClub();
+            List<Channel> channels = channelRepository.findByClubId(club.getId());
+            int memberCount = membershipRepository.findByClubId(club.getId()).size();
+            return ClubResponse.from(club, channels, memberCount);
+        }).toList();
+    }
+
+    public List<ClubResponse> getAllClubs() {
+        return clubRepository.findAll().stream().map(club -> {
+            List<Channel> channels = channelRepository.findByClubId(club.getId());
+            int memberCount = membershipRepository.findByClubId(club.getId()).size();
+            return ClubResponse.from(club, channels, memberCount);
+        }).toList();
+    }
+
     @Transactional
     public MembershipResponse joinClub(Long clubId, Long userId) {
         Club club = getClubOrThrow(clubId);
