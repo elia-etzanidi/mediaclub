@@ -1,6 +1,7 @@
 package com.mediaclub.backend.controller;
 
 import com.mediaclub.backend.dto.MessageResponse;
+import com.mediaclub.backend.dto.ReactionRequest;
 import com.mediaclub.backend.dto.SendMessageRequest;
 import com.mediaclub.backend.dto.TypingEvent;
 import com.mediaclub.backend.dto.TypingIndicatorRequest;
@@ -15,6 +16,8 @@ import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+
+import java.util.Map;
 
 /**
  * Handles messages sent BY clients to /app/** destinations (see WebSocketConfig).
@@ -31,6 +34,9 @@ public class ChatController {
     public void sendMessage(@DestinationVariable Long channelId,
                              @Payload SendMessageRequest request,
                              Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+            return;
+        }
         UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
 
         MessageResponse response = messageService.sendMessage(channelId, user.getId(), request.getContent());
@@ -38,10 +44,40 @@ public class ChatController {
         messagingTemplate.convertAndSend("/topic/channel/" + channelId, response);
     }
 
+    @MessageMapping("/channel/{channelId}/react")
+    public void react(@DestinationVariable Long channelId,
+                      @Payload ReactionRequest request,
+                      Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+            return;
+        }
+        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
+
+        messageService.toggleReaction(request.getMessageId(), user.getId(), request.getEmoji());
+    }
+
+    @MessageMapping("/channel/{channelId}/delete")
+    public void deleteMessage(@DestinationVariable Long channelId,
+                              @Payload Map<String, Long> payload,
+                              Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+            return;
+        }
+        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
+        Long messageId = payload.get("messageId");
+        if (messageId != null) {
+            boolean isAdmin = user.getUser().isGlobalAdmin();
+            messageService.deleteMessage(messageId, user.getId(), isAdmin);
+        }
+    }
+
     @MessageMapping("/channel/{channelId}/typing")
     public void typing(@DestinationVariable Long channelId,
                         @Payload TypingIndicatorRequest request,
                         Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+            return;
+        }
         UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
 
         TypingEvent event = new TypingEvent(channelId, user.getId(), user.getUsername(), request.isTyping());

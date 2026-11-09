@@ -1,5 +1,5 @@
-// Message API Service with backend integration & local fallback
 import defaultAvatar from '../assets/default-avatar.png';
+import { websocketService } from './websocketService';
 
 // Initial pre-seeded mock conversations for demo clubs
 const SEED_MESSAGES = {
@@ -321,14 +321,46 @@ export const sendChannelMessage = async (club, channel, content, currentUser) =>
 };
 
 // Helper to save a single new message to local storage
-const saveMessageToLocal = (clubId, channelId, message) => {
+export const saveMessageToLocal = (clubId, channelId, message) => {
+  if (!clubId || !channelId || !message) return;
   const localKey = getStorageKey(clubId, channelId);
   try {
     const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
-    const updated = [...existing, message];
+    const exists = existing.some((m) => m.id === message.id);
+    const updated = exists
+      ? existing.map((m) => (m.id === message.id ? { ...m, ...message } : m))
+      : [...existing, message];
     localStorage.setItem(localKey, JSON.stringify(updated));
   } catch (e) {
     console.warn('Failed to save message to local storage:', e);
+  }
+};
+
+// Helper to update reactions in local storage
+export const updateLocalMessagesReactions = (clubId, channelId, messageId, reactions) => {
+  if (!clubId || !channelId || !messageId) return;
+  const localKey = getStorageKey(clubId, channelId);
+  try {
+    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const updated = existing.map((m) =>
+      m.id === messageId ? { ...m, reactions: reactions || [] } : m
+    );
+    localStorage.setItem(localKey, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Failed to update reactions in local storage:', e);
+  }
+};
+
+// Helper to remove message in local storage
+export const removeLocalMessage = (clubId, channelId, messageId) => {
+  if (!clubId || !channelId || !messageId) return;
+  const localKey = getStorageKey(clubId, channelId);
+  try {
+    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const updated = existing.filter((m) => m.id !== messageId);
+    localStorage.setItem(localKey, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Failed to remove message from local storage:', e);
   }
 };
 
@@ -416,18 +448,26 @@ export const toggleMessageReaction = async (clubId, channelId, messageId, emoji,
     console.warn('Failed to update reaction locally:', e);
   }
 
-  // Attempt backend sync in background
+  // Sync with backend via WebSocket if connected, otherwise via REST endpoint
   if (token && typeof messageId === 'number') {
-    try {
-      await fetch(`/api/messages/${messageId}/reactions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ emoji })
-      });
-    } catch (e) {}
+    const sentViaWs =
+      typeof channelId === 'number' &&
+      websocketService.sendReaction(channelId, messageId, emoji);
+
+    if (!sentViaWs) {
+      try {
+        await fetch(`/api/messages/${messageId}/reactions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ emoji })
+        });
+      } catch (e) {
+        console.warn('Failed to sync reaction via REST:', e);
+      }
+    }
   }
 
   return updatedList;

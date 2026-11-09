@@ -18,15 +18,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // clients connect here (via SockJS fallback for browsers that don't support raw WebSocket)
+        // Pure WebSocket endpoint for standard STOMP clients
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns(
-                        "http://localhost:3000",
-                        "http://localhost:5173",
-                        "http://localhost:5500",
-                        "http://127.0.0.1:5500",
-                        "http://localhost:5500"
-                )
+                .setAllowedOriginPatterns("*");
+
+        // SockJS fallback for test client or browsers that don't support raw WebSocket
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 

@@ -53,7 +53,7 @@ public class MessageController {
             @PathVariable Long messageId,
             @Valid @RequestBody AddReactionRequest request) {
         Long userId = currentUserProvider.getCurrentUserId();
-        return ResponseEntity.ok(messageService.addReaction(messageId, userId, request.getEmoji()));
+        return ResponseEntity.ok(messageService.toggleReaction(messageId, userId, request.getEmoji()));
     }
 
     @DeleteMapping("/api/messages/{messageId}/reactions/{emoji}")

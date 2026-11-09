@@ -5,8 +5,12 @@ import {
   fetchChannelMessages,
   sendChannelMessage,
   deleteChannelMessage,
-  toggleMessageReaction
+  toggleMessageReaction,
+  saveMessageToLocal,
+  updateLocalMessagesReactions,
+  removeLocalMessage
 } from '../../../services/messageService';
+import { websocketService } from '../../../services/websocketService';
 import DeleteMessageModal from './DeleteMessageModal';
 
 // Standard topic hints by channel name
@@ -43,11 +47,18 @@ const ChatArea = ({
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
+  const [typingUsers, setTypingUsers] = useState({});
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
   const emojiPickerRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const isScrolledUpRef = useRef(isScrolledUp);
+
+  useEffect(() => {
+    isScrolledUpRef.current = isScrolledUp;
+  }, [isScrolledUp]);
 
   // If a mention was requested from the user card, insert @username into input box
   useEffect(() => {
@@ -91,7 +102,7 @@ const ChatArea = ({
     CHANNEL_TOPICS[activeChannelName.toLowerCase()] ||
     `Discussion channel for ✦ ${activeChannelName}`;
 
-  // Load channel messages whenever channel changes
+  // Load channel messages and subscribe to real-time WebSocket updates whenever channel changes
   useEffect(() => {
     let isCurrent = true;
     const load = async () => {
@@ -111,11 +122,89 @@ const ChatArea = ({
     setInputText('');
     setSearchQuery('');
     setShowSpoilerBanner(true);
+    setTypingUsers({});
+
+    // Subscribe to real-time WebSocket channel events
+    let unsubscribe = () => {};
+    if (typeof activeChannelId === 'number' && club?.id) {
+      const channelId = activeChannelId;
+      const clubId = club.id;
+
+      unsubscribe = websocketService.subscribeToChannel(channelId, {
+        onMessage: (incomingMsg) => {
+          if (!incomingMsg) return;
+          const normalized = {
+            id: incomingMsg.id,
+            channelId: incomingMsg.channelId,
+            senderId: incomingMsg.senderId,
+            senderUsername: incomingMsg.senderUsername,
+            senderAvatarUrl: incomingMsg.senderAvatarUrl || defaultAvatar,
+            content: incomingMsg.content,
+            sentAt: incomingMsg.sentAt || new Date().toISOString(),
+            editedAt: incomingMsg.editedAt,
+            deleted: incomingMsg.deleted,
+            reactions: incomingMsg.reactions || []
+          };
+
+          setMessages((prev) => {
+            const exists = prev.some((m) => m.id === normalized.id);
+            if (exists) {
+              return prev.map((m) => (m.id === normalized.id ? { ...m, ...normalized } : m));
+            }
+            return [...prev, normalized];
+          });
+
+          saveMessageToLocal(clubId, channelId, normalized);
+
+          if (!isScrolledUpRef.current) {
+            setTimeout(() => scrollToBottom('smooth'), 50);
+          }
+        },
+
+        onReaction: (reactionData) => {
+          if (!reactionData || !reactionData.messageId) return;
+          const { messageId, reactions } = reactionData;
+
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, reactions: reactions || [] } : m
+            )
+          );
+          updateLocalMessagesReactions(clubId, channelId, messageId, reactions || []);
+        },
+
+        onDelete: (deleteData) => {
+          if (!deleteData || !deleteData.messageId) return;
+          const { messageId } = deleteData;
+          setMessages((prev) => prev.filter((m) => m.id !== messageId));
+          removeLocalMessage(clubId, channelId, messageId);
+        },
+
+        onTyping: (typingData) => {
+          if (!typingData || !typingData.username) return;
+          if (typingData.userId === currentUser?.id) return;
+          setTypingUsers((prev) => {
+            if (typingData.typing) {
+              return { ...prev, [typingData.userId]: typingData.username };
+            } else {
+              const next = { ...prev };
+              delete next[typingData.userId];
+              return next;
+            }
+          });
+        }
+      });
+    }
 
     return () => {
       isCurrent = false;
+      unsubscribe();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (typeof activeChannelId === 'number') {
+        websocketService.sendTyping(activeChannelId, false);
+      }
     };
-  }, [club?.id, activeChannelId]);
+  }, [club?.id, activeChannelId, currentUser?.id]);
 
   // Handle scroll detection for "jump to bottom" button
   const handleScroll = () => {
@@ -156,9 +245,17 @@ const ChatArea = ({
       textareaRef.current.style.height = 'auto';
     }
 
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (typeof activeChannelId === 'number') {
+      websocketService.sendTyping(activeChannelId, false);
+    }
+
     const newMsg = await sendChannelMessage(club, activeChannel, trimmed, currentUser);
     if (newMsg) {
-      setMessages((prev) => [...prev, newMsg]);
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        return [...prev, newMsg];
+      });
       setTimeout(() => scrollToBottom('smooth'), 40);
     }
   };
@@ -181,6 +278,14 @@ const ChatArea = ({
     const target = e.target;
     target.style.height = 'auto';
     target.style.height = `${Math.min(target.scrollHeight, 140)}px`;
+
+    if (typeof activeChannelId === 'number') {
+      websocketService.sendTyping(activeChannelId, true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        websocketService.sendTyping(activeChannelId, false);
+      }, 2500);
+    }
   };
 
   // Delete message
@@ -720,6 +825,19 @@ const ChatArea = ({
 
       {/* Bottom Message Input Box */}
       <div className="chat-bottom-input-container">
+        {Object.keys(typingUsers).length > 0 && (
+          <div className="channel-typing-indicator" aria-live="polite">
+            <span className="typing-dots">
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+            </span>
+            <span>
+              {Object.values(typingUsers).join(', ')}{' '}
+              {Object.keys(typingUsers).length === 1 ? 'is' : 'are'} typing...
+            </span>
+          </div>
+        )}
         <form
           className="chat-input-box"
           onClick={(e) => {

@@ -1,7 +1,9 @@
 package com.mediaclub.backend.service;
 
+import com.mediaclub.backend.dto.MessageDeletedEvent;
 import com.mediaclub.backend.dto.MessageResponse;
 import com.mediaclub.backend.dto.NotificationEvent;
+import com.mediaclub.backend.dto.ReactionEvent;
 import com.mediaclub.backend.dto.ReactionSummary;
 import com.mediaclub.backend.entity.*;
 import com.mediaclub.backend.exception.BadRequestException;
@@ -21,6 +23,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -103,7 +106,7 @@ public class MessageService {
     }
 
     @Transactional
-    public void deleteMessage(Long messageId, Long requesterUserId, boolean requesterIsGlobalAdmin) {
+    public Long deleteMessage(Long messageId, Long requesterUserId, boolean requesterIsGlobalAdmin) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
 
@@ -117,6 +120,37 @@ public class MessageService {
 
         message.setDeleted(true);
         messageRepository.save(message);
+
+        Long channelId = message.getChannel().getId();
+        messagingTemplate.convertAndSend("/topic/channel/" + channelId + "/delete", new MessageDeletedEvent(messageId, channelId));
+        return channelId;
+    }
+
+    @Transactional
+    public List<ReactionSummary> toggleReaction(Long messageId, Long userId, String emoji) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        requireCanRead(message.getChannel(), userId);
+
+        Optional<Reaction> existing = reactionRepository.findByMessageIdAndUserIdAndEmoji(messageId, userId, emoji);
+        if (existing.isPresent()) {
+            reactionRepository.delete(existing.get());
+        } else {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+            Reaction reaction = Reaction.builder()
+                    .message(message)
+                    .user(user)
+                    .emoji(emoji)
+                    .build();
+            reactionRepository.save(reaction);
+        }
+
+        List<ReactionSummary> summaries = getReactionSummaries(messageId);
+        broadcastReaction(message.getChannel().getId(), messageId, summaries);
+        return summaries;
     }
 
     @Transactional
@@ -141,7 +175,9 @@ public class MessageService {
                 .build();
         reactionRepository.save(reaction);
 
-        return getReactionSummaries(messageId);
+        List<ReactionSummary> summaries = getReactionSummaries(messageId);
+        broadcastReaction(message.getChannel().getId(), messageId, summaries);
+        return summaries;
     }
 
     @Transactional
@@ -149,9 +185,17 @@ public class MessageService {
         Reaction reaction = reactionRepository.findByMessageIdAndUserIdAndEmoji(messageId, userId, emoji)
                 .orElseThrow(() -> new ResourceNotFoundException("Reaction not found"));
 
+        Long channelId = reaction.getMessage().getChannel().getId();
         reactionRepository.delete(reaction);
 
-        return getReactionSummaries(messageId);
+        List<ReactionSummary> summaries = getReactionSummaries(messageId);
+        broadcastReaction(channelId, messageId, summaries);
+        return summaries;
+    }
+
+    private void broadcastReaction(Long channelId, Long messageId, List<ReactionSummary> summaries) {
+        ReactionEvent event = new ReactionEvent(messageId, channelId, summaries);
+        messagingTemplate.convertAndSend("/topic/channel/" + channelId + "/reactions", event);
     }
 
     // --- internal helpers ---

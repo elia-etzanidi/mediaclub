@@ -1,7 +1,8 @@
-// Authentication API Service
+import { websocketService } from './websocketService';
 
 export const clearLocalSession = () => {
   try {
+    websocketService.disconnect();
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -33,6 +34,7 @@ export const registerUser = async ({ username, email, password }) => {
 
   if (data.token) {
     localStorage.setItem('token', data.token);
+    websocketService.connect();
   }
   const avatar = data.avatarUrl || '/default-avatar.png';
   localStorage.setItem('user', JSON.stringify({
@@ -65,6 +67,7 @@ export const loginUser = async ({ username, password }) => {
   }
 
   localStorage.setItem('token', data.token);
+  websocketService.connect();
   const avatar = data.avatarUrl || '/default-avatar.png';
   localStorage.setItem('user', JSON.stringify({
     id: data.userId,
