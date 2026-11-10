@@ -74,7 +74,14 @@ public class DirectMessageService {
     public List<ConversationResponse> listConversations(Long userId) {
         List<Conversation> conversations = conversationRepository.findByUserAIdOrUserBId(userId, userId);
         return conversations.stream()
-                .map(c -> ConversationResponse.from(c, userId))
+                .filter(c -> directMessageRepository.existsByConversationId(c.getId()))
+                .map(c -> {
+                    List<DirectMessage> latest = directMessageRepository.findByConversationIdOrderBySentAtDesc(c.getId(), PageRequest.of(0, 1));
+                    String lastMsg = latest.isEmpty() ? null : (latest.get(0).isDeleted() ? "[message deleted]" : latest.get(0).getContent());
+                    Instant lastMsgAt = latest.isEmpty() ? c.getCreatedAt() : latest.get(0).getSentAt();
+                    return ConversationResponse.from(c, userId, lastMsg, lastMsgAt);
+                })
+                .sorted(Comparator.comparing(ConversationResponse::getLastMessageAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
@@ -93,7 +100,21 @@ public class DirectMessageService {
                 .build();
         message = directMessageRepository.save(message);
 
+        DirectMessageResponse response = DirectMessageResponse.from(message);
+
         User recipient = conversation.getUserA().getId().equals(senderId) ? conversation.getUserB() : conversation.getUserA();
+
+        // 1. Deliver to both participants on the specific conversation queue
+        String userAUsername = conversation.getUserA().getUsername();
+        String userBUsername = conversation.getUserB().getUsername();
+        messagingTemplate.convertAndSendToUser(userAUsername, "/queue/dm/" + conversationId, response);
+        messagingTemplate.convertAndSendToUser(userBUsername, "/queue/dm/" + conversationId, response);
+
+        // 2. Deliver to both participants' personal DM queue so their People panel updates in real time
+        messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/dms", response);
+        messagingTemplate.convertAndSendToUser(sender.getUsername(), "/queue/dms", response);
+
+        // 3. Deliver notification event if not muted
         if (!notificationPreferenceService.isDmMuted(recipient.getId())) {
             String preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
             NotificationEvent event = new NotificationEvent(
@@ -109,7 +130,7 @@ public class DirectMessageService {
             messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", event);
         }
 
-        return DirectMessageResponse.from(message);
+        return response;
     }
 
     public List<DirectMessageResponse> getHistory(Long conversationId, Long requesterId, int limit) {

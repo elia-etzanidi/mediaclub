@@ -9,5 +9,7 @@ import java.util.List;
 public interface DirectMessageRepository extends JpaRepository<DirectMessage, Long> {
 
     List<DirectMessage> findByConversationIdOrderBySentAtDesc(Long conversationId, Pageable pageable);
+
+    boolean existsByConversationId(Long conversationId);
 }
 

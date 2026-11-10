@@ -14,6 +14,7 @@ public class DirectMessageResponse {
     private Long conversationId;
     private Long senderId;
     private String senderUsername;
+    private String senderAvatarUrl;
     private String content;
     private Instant sentAt;
     private Instant editedAt;
@@ -25,6 +26,7 @@ public class DirectMessageResponse {
                 message.getConversation().getId(),
                 message.getSender().getId(),
                 message.getSender().getUsername(),
+                message.getSender().getAvatarUrl(),
                 message.isDeleted() ? "[message deleted]" : message.getContent(),
                 message.getSentAt(),
                 message.getEditedAt(),

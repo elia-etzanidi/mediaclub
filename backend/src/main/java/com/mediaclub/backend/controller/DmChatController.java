@@ -34,9 +34,7 @@ public class DmChatController {
                              Authentication authentication) {
         UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
 
-        DirectMessageResponse response = directMessageService.sendMessage(conversationId, user.getId(), request.getContent());
-
-        deliverToBothParticipants(conversationId, "/queue/dm/" + conversationId, response);
+        directMessageService.sendMessage(conversationId, user.getId(), request.getContent());
     }
 
     @MessageMapping("/dm/{conversationId}/typing")

@@ -17,8 +17,14 @@ public class ConversationResponse {
     private String otherAvatarUrl;
     private User.UserStatus otherStatus;
     private Instant createdAt;
+    private String lastMessage;
+    private Instant lastMessageAt;
 
     public static ConversationResponse from(Conversation conversation, Long requestingUserId) {
+        return from(conversation, requestingUserId, null, conversation.getCreatedAt());
+    }
+
+    public static ConversationResponse from(Conversation conversation, Long requestingUserId, String lastMessage, Instant lastMessageAt) {
         User other = conversation.getUserA().getId().equals(requestingUserId)
                 ? conversation.getUserB()
                 : conversation.getUserA();
@@ -29,7 +35,9 @@ public class ConversationResponse {
                 other.getUsername(),
                 other.getAvatarUrl(),
                 other.getStatus() != null ? other.getStatus() : User.UserStatus.OFFLINE,
-                conversation.getCreatedAt()
+                conversation.getCreatedAt(),
+                lastMessage,
+                lastMessageAt != null ? lastMessageAt : conversation.getCreatedAt()
         );
     }
 }

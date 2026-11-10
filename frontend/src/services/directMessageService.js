@@ -76,11 +76,46 @@ const DEMO_RESPONSES = {
 
 import { getCurrentUser } from './authService';
 
-const getDmStorageKey = (person, currentUserId) => {
+export const getDmStorageKey = (person, currentUserId) => {
   if (!person) return `${DM_STORAGE_PREFIX}default`;
   const nameKey = (person.name || person.username || String(person.id)).trim().toLowerCase().replace(/\s+/g, '_');
   const uId = currentUserId || getCurrentUser()?.id || 'guest';
   return `${DM_STORAGE_PREFIX}u${uId}_${nameKey}`;
+};
+
+/**
+ * Check if two accounts have any chat history
+ */
+export const hasDmHistory = (person, currentUserId) => {
+  if (!person) return false;
+
+  if (person.lastMessage && typeof person.lastMessage === 'string' && person.lastMessage.trim().length > 0) {
+    return true;
+  }
+  if (person.hasSentMessage) {
+    return true;
+  }
+
+  const key = getDmStorageKey(person, currentUserId);
+  try {
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return true;
+      }
+    }
+  } catch (e) {}
+
+  const personName = person.name || person.username || '';
+  if (!localStorage.getItem('token')) {
+    const seed = SEED_DM_CONVERSATIONS[personName];
+    if (Array.isArray(seed) && seed.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 /**
@@ -112,7 +147,9 @@ export const fetchConversationsApi = async () => {
             img: conv.otherAvatarUrl || defaultAvatar,
             role: 'member',
             status: isOnline ? 'Online' : 'Offline',
-            isOnline
+            isOnline,
+            lastMessage: conv.lastMessage || null,
+            lastMessageAt: conv.lastMessageAt || conv.createdAt || null
           };
         });
       }
@@ -295,9 +332,12 @@ export const sendDirectMessage = async (person, content, currentUser, onSimulate
   return newMsg;
 };
 
-const saveDmToLocal = (key, message) => {
+export const saveDmToLocal = (key, message) => {
   try {
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    if (existing.some((m) => m.id === message.id)) {
+      return;
+    }
     const updated = [...existing, message];
     localStorage.setItem(key, JSON.stringify(updated));
   } catch (e) {
@@ -439,3 +479,50 @@ export const getLatestDmSnippet = (person) => {
 
   return null;
 };
+
+/**
+ * Get numerical timestamp of the most recent activity/message for a chat
+ */
+export const getDmTimestamp = (person) => {
+  if (!person) return 0;
+
+  // Momentary chat currently being composed stays at the top
+  if (person.isTemporary) {
+    return person.temporaryAt || Date.now() + 1000;
+  }
+
+  const snippet = getLatestDmSnippet(person);
+  if (snippet?.sentAt) {
+    const t = new Date(snippet.sentAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+
+  if (person.lastMessageAt) {
+    const t = new Date(person.lastMessageAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+
+  if (person.createdAt) {
+    const t = new Date(person.createdAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+
+  return 0;
+};
+
+/**
+ * Sort chat list in order from most to least recent
+ */
+export const sortChatsByRecency = (peopleList) => {
+  if (!Array.isArray(peopleList)) return [];
+  return [...peopleList].sort((a, b) => {
+    // Keep temporary active chat at the very top
+    if (a.isTemporary && !b.isTemporary) return -1;
+    if (!a.isTemporary && b.isTemporary) return 1;
+
+    const timeA = getDmTimestamp(a);
+    const timeB = getDmTimestamp(b);
+    return timeB - timeA;
+  });
+};
+

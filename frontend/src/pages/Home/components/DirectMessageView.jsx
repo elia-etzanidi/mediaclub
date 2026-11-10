@@ -8,6 +8,7 @@ import {
   toggleDirectMessageReaction
 } from '../../../services/directMessageService';
 import DeleteMessageModal from './DeleteMessageModal';
+import websocketService from '../../../services/websocketService';
 
 const QUICK_EMOJIS = ['❤️', '👍', '🔥', '🍿', '😮', '😂'];
 const PICKER_EMOJIS = [
@@ -71,6 +72,43 @@ const DirectMessageView = ({
       isMounted = false;
     };
   }, [person, currentUser]);
+
+  // Subscribe to real-time incoming messages for this conversation
+  useEffect(() => {
+    if (!person) return;
+
+    const unsubscribe = websocketService.subscribeToDirectMessages((dm) => {
+      if (!dm) return;
+      const isForThisConv =
+        (person.conversationId && dm.conversationId && String(person.conversationId) === String(dm.conversationId)) ||
+        (dm.senderId && person.id && String(dm.senderId) === String(person.id)) ||
+        (dm.senderUsername && (person.name || person.username) &&
+          dm.senderUsername.toLowerCase() === (person.name || person.username).toLowerCase());
+
+      if (isForThisConv) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === dm.id)) {
+            return prev;
+          }
+          const formatted = {
+            id: dm.id,
+            conversationId: dm.conversationId,
+            senderId: dm.senderId,
+            senderUsername: dm.senderUsername,
+            senderAvatarUrl: dm.senderAvatarUrl || personAvatar,
+            content: dm.content,
+            sentAt: dm.sentAt || new Date().toISOString(),
+            reactions: []
+          };
+          return [...prev, formatted];
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [person, personAvatar]);
 
   // Auto-scroll to bottom when messages load or change (if not scrolled far up)
   useEffect(() => {

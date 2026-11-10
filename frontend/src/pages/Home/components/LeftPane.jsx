@@ -1,5 +1,5 @@
-import React from 'react';
-import { getLatestDmSnippet } from '../../../services/directMessageService';
+import React, { useMemo } from 'react';
+import { getLatestDmSnippet, sortChatsByRecency } from '../../../services/directMessageService';
 import defaultAvatar from '../../../assets/default-avatar.png';
 
 const LeftPane = ({
@@ -12,6 +12,13 @@ const LeftPane = ({
   onOpenStartDmModal,
   dmUpdateTick
 }) => {
+  const displayItems = useMemo(() => {
+    if (activeTab === 'people') {
+      return sortChatsByRecency(items);
+    }
+    return items;
+  }, [items, activeTab, dmUpdateTick]);
+
   return (
     <aside className="left-pane">
       <div className="list-header">
@@ -51,7 +58,7 @@ const LeftPane = ({
       )}
 
       <div className="scrollable-list">
-        {activeTab === 'clubs' && items.length === 0 ? (
+        {activeTab === 'clubs' && displayItems.length === 0 ? (
           <div className="left-pane-empty">
             <div className="left-pane-empty-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -77,7 +84,7 @@ const LeftPane = ({
             )}
           </div>
         ) : (
-          items.map((item) => {
+          displayItems.map((item) => {
             const isSelected = selectedItemId === item.id;
             const snippet = activeTab === 'people'
               ? getLatestDmSnippet(item) || (item.lastMessage ? { content: item.lastMessage } : null)

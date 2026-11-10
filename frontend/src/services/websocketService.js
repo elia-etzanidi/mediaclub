@@ -12,6 +12,7 @@ class WebSocketService {
     this.connected = false;
     this.channelSubscriptions = new Map(); // channelId -> Set of callback objects { onMessage, onReaction, onDelete, onTyping }
     this.clubPresenceSubscriptions = new Map(); // clubId -> Set of callbacks (presenceEvent) => void
+    this.dmListeners = new Set(); // Set of callbacks (dmData) => void
     this.stompSubscriptions = new Map(); // key -> stompSubscription
     this.pendingConnect = null;
   }
@@ -90,6 +91,7 @@ class WebSocketService {
       this.connected = false;
       this.channelSubscriptions.clear();
       this.clubPresenceSubscriptions.clear();
+      this.dmListeners.clear();
       this.stompSubscriptions.clear();
       this.pendingConnect = null;
     }
@@ -236,6 +238,10 @@ class WebSocketService {
     for (const clubId of this.clubPresenceSubscriptions.keys()) {
       this.setupClubPresenceSubscription(clubId);
     }
+    if (this.dmListeners.size > 0) {
+      this.setupDmSubscription();
+      this.setupNotificationSubscription();
+    }
   }
 
   resubscribeAllChannels() {
@@ -355,6 +361,82 @@ class WebSocketService {
       });
     } catch {
       // Ignore typing send error
+    }
+  }
+
+  // Subscribe to incoming Direct Messages for the logged in user
+  subscribeToDirectMessages(callback) {
+    if (typeof callback !== 'function') return () => {};
+    this.dmListeners.add(callback);
+
+    if (this.connected && this.client) {
+      this.setupDmSubscription();
+      this.setupNotificationSubscription();
+    } else {
+      this.connect();
+    }
+
+    return () => {
+      this.dmListeners.delete(callback);
+    };
+  }
+
+  setupDmSubscription() {
+    if (!this.client || !this.connected) return;
+    const key = 'user_dms';
+    if (!this.stompSubscriptions.has(key)) {
+      try {
+        const sub = this.client.subscribe('/user/queue/dms', (frame) => {
+          try {
+            const data = JSON.parse(frame.body);
+            this.dmListeners.forEach((cb) => {
+              try {
+                cb(data);
+              } catch (e) {
+                console.error('Error running dm callback:', e);
+              }
+            });
+          } catch (e) {
+            console.error('Error parsing dm frame:', e);
+          }
+        });
+        this.stompSubscriptions.set(key, sub);
+      } catch (e) {
+        console.warn('Failed to subscribe to /user/queue/dms:', e);
+      }
+    }
+  }
+
+  setupNotificationSubscription() {
+    if (!this.client || !this.connected) return;
+    const key = 'user_notifications';
+    if (!this.stompSubscriptions.has(key)) {
+      try {
+        const sub = this.client.subscribe('/user/queue/notifications', (frame) => {
+          try {
+            const notif = JSON.parse(frame.body);
+            if (notif.type === 'DIRECT_MESSAGE') {
+              this.dmListeners.forEach((cb) => {
+                try {
+                  cb({
+                    id: `notif-${Date.now()}`,
+                    conversationId: notif.conversationId,
+                    senderUsername: notif.senderUsername,
+                    content: notif.contentPreview,
+                    sentAt: notif.sentAt,
+                    isNotification: true
+                  });
+                } catch (e) {}
+              });
+            }
+          } catch (e) {
+            console.error('Error parsing notification frame:', e);
+          }
+        });
+        this.stompSubscriptions.set(key, sub);
+      } catch (e) {
+        console.warn('Failed to subscribe to /user/queue/notifications:', e);
+      }
     }
   }
 }

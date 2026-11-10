@@ -24,7 +24,13 @@ import {
   leaveClubApi,
   fetchClubMembersApi
 } from '../../services/clubService';
-import { fetchConversationsApi } from '../../services/directMessageService';
+import {
+  fetchConversationsApi,
+  hasDmHistory,
+  saveDmToLocal,
+  getDmStorageKey,
+  sortChatsByRecency
+} from '../../services/directMessageService';
 import websocketService from '../../services/websocketService';
 import defaultAvatar from '../../assets/default-avatar.png';
 
@@ -92,12 +98,12 @@ const HomePage = () => {
       const saved = localStorage.getItem(getPeopleKey(initialUserId));
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return sortChatsByRecency(parsed);
       }
     } catch (e) {
       console.warn('Error loading saved direct message people:', e);
     }
-    return token ? [] : initialPeople;
+    return token ? [] : sortChatsByRecency(initialPeople);
   });
 
   const [isStartDmModalOpen, setIsStartDmModalOpen] = useState(false);
@@ -113,11 +119,28 @@ const HomePage = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(getPeopleKey(user?.id), JSON.stringify(people));
+      const persistentPeople = people.filter((p) => !p.isTemporary);
+      localStorage.setItem(getPeopleKey(user?.id), JSON.stringify(persistentPeople));
     } catch (e) {
       console.warn('Error saving direct message people:', e);
     }
   }, [people, user?.id]);
+
+  // When returning to the clubs view, momentary chats with no chat history disappear from the left panel
+  useEffect(() => {
+    if (activeTab === 'clubs') {
+      setPeople((prev) => {
+        const hasTemp = prev.some((p) => p.isTemporary);
+        if (!hasTemp) return prev;
+        const cleaned = prev.filter((p) => !p.isTemporary);
+        setSelectedPersonId((currId) => {
+          const stillExists = cleaned.some((p) => p.id === currId);
+          return stillExists ? currId : (cleaned[0]?.id || null);
+        });
+        return cleaned;
+      });
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (selectedClubId) {
@@ -193,11 +216,12 @@ const HomePage = () => {
 
     fetchConversationsApi().then((convs) => {
       if (Array.isArray(convs)) {
-        setPeople(convs);
-        if (convs.length > 0) {
+        const sorted = sortChatsByRecency(convs);
+        setPeople(sorted);
+        if (sorted.length > 0) {
           setSelectedPersonId((prevId) => {
-            const exists = convs.some((p) => p.id === prevId);
-            return exists ? prevId : convs[0].id;
+            const exists = sorted.some((p) => p.id === prevId);
+            return exists ? prevId : sorted[0].id;
           });
         } else {
           setSelectedPersonId(null);
@@ -222,6 +246,28 @@ const HomePage = () => {
           setSystemClubs(freshSystem);
         }
       });
+
+      fetchConversationsApi().then((freshConvs) => {
+        if (Array.isArray(freshConvs) && freshConvs.length > 0) {
+          setPeople((prev) => {
+            const tempPerson = prev.find((p) => p.isTemporary);
+            const merged = freshConvs.map((c) => {
+              const prevMatch = prev.find(
+                (p) => p.id === c.id || (p.name && c.name && p.name.toLowerCase() === c.name.toLowerCase())
+              );
+              return {
+                ...c,
+                lastMessage: prevMatch?.lastMessage || c.lastMessage,
+                lastMessageAt: prevMatch?.lastMessageAt || c.lastMessageAt
+              };
+            });
+            if (tempPerson && !merged.some((p) => p.id === tempPerson.id)) {
+              merged.unshift(tempPerson);
+            }
+            return sortChatsByRecency(merged);
+          });
+        }
+      });
     };
 
     window.addEventListener('focus', handleSyncOnFocus);
@@ -236,6 +282,143 @@ const HomePage = () => {
       window.removeEventListener('focus', handleSyncOnFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
+  }, [user?.id]);
+
+  // Real-time listener for incoming direct messages
+  // When someone messages this user for the first time, the chat is immediately added to their left panel in "People"
+  useEffect(() => {
+    const unsubscribe = websocketService.subscribeToDirectMessages((dm) => {
+      if (!dm) return;
+
+      const isFromMe = user?.id && dm.senderId && String(user.id) === String(dm.senderId);
+      const otherUsername = isFromMe ? null : dm.senderUsername;
+      const otherId = isFromMe ? null : dm.senderId;
+      const otherAvatar = dm.senderAvatarUrl || defaultAvatar;
+
+      if (!isFromMe && otherUsername) {
+        // Cache message locally
+        const personRef = { id: otherId, name: otherUsername, username: otherUsername };
+        const key = getDmStorageKey(personRef, user?.id);
+        saveDmToLocal(key, {
+          id: dm.id,
+          conversationId: dm.conversationId,
+          senderId: dm.senderId,
+          senderUsername: dm.senderUsername,
+          senderAvatarUrl: otherAvatar,
+          content: dm.content,
+          sentAt: dm.sentAt || new Date().toISOString(),
+          reactions: []
+        });
+      }
+
+      setPeople((prev) => {
+        const existingIdx = prev.findIndex((p) =>
+          (otherId && p.id && String(p.id) === String(otherId)) ||
+          (p.name && otherUsername && p.name.toLowerCase() === otherUsername.toLowerCase())
+        );
+
+        if (existingIdx > -1) {
+          const existing = prev[existingIdx];
+          const updated = {
+            ...existing,
+            isTemporary: false,
+            conversationId: dm.conversationId || existing.conversationId,
+            lastMessage: dm.content,
+            lastMessageAt: dm.sentAt || new Date().toISOString()
+          };
+          const nextList = [...prev];
+          nextList.splice(existingIdx, 1);
+          nextList.unshift(updated);
+          return sortChatsByRecency(nextList);
+        } else if (!isFromMe && otherUsername) {
+          // Newly received message from someone: add to left panel in "People"
+          const newPerson = {
+            id: otherId || Date.now(),
+            conversationId: dm.conversationId,
+            name: otherUsername,
+            username: otherUsername,
+            img: otherAvatar,
+            role: 'member',
+            status: 'Online',
+            isOnline: true,
+            lastMessage: dm.content,
+            lastMessageAt: dm.sentAt || new Date().toISOString(),
+            isTemporary: false
+          };
+          return sortChatsByRecency([newPerson, ...prev]);
+        }
+        return prev;
+      });
+
+      setDmUpdateTick((prev) => prev + 1);
+
+      // Also refresh conversations from backend if authenticated
+      const activeToken = getToken();
+      if (activeToken) {
+        fetchConversationsApi().then((freshConvs) => {
+          if (Array.isArray(freshConvs) && freshConvs.length > 0) {
+            setPeople((prev) => {
+              const tempPerson = prev.find((p) => p.isTemporary);
+              const merged = freshConvs.map((c) => {
+                const prevMatch = prev.find(
+                  (p) => p.id === c.id || (p.name && c.name && p.name.toLowerCase() === c.name.toLowerCase())
+                );
+                return {
+                  ...c,
+                  lastMessage: prevMatch?.lastMessage || c.lastMessage,
+                  lastMessageAt: prevMatch?.lastMessageAt || c.lastMessageAt
+                };
+              });
+              if (tempPerson && !merged.some((p) => p.id === tempPerson.id)) {
+                merged.unshift(tempPerson);
+              }
+              return sortChatsByRecency(merged);
+            });
+          }
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user?.id]);
+
+  // Periodic fallback sync for DM conversations
+  useEffect(() => {
+    const activeToken = getToken();
+    if (!activeToken) return;
+
+    const intervalId = setInterval(() => {
+      fetchConversationsApi().then((freshConvs) => {
+        if (Array.isArray(freshConvs) && freshConvs.length > 0) {
+          setPeople((prev) => {
+            const hasNew = freshConvs.some(
+              (fc) => !prev.some((p) => p.id === fc.id || (p.name && fc.name && p.name.toLowerCase() === fc.name.toLowerCase()))
+            );
+            if (!hasNew) return prev;
+
+            const tempPerson = prev.find((p) => p.isTemporary);
+            const merged = freshConvs.map((c) => {
+              const prevMatch = prev.find(
+                (p) => p.id === c.id || (p.name && c.name && p.name.toLowerCase() === c.name.toLowerCase())
+              );
+              return {
+                ...c,
+                lastMessage: prevMatch?.lastMessage || c.lastMessage,
+                lastMessageAt: prevMatch?.lastMessageAt || c.lastMessageAt
+              };
+            });
+            if (tempPerson && !merged.some((p) => p.id === tempPerson.id)) {
+              merged.unshift(tempPerson);
+            }
+            return sortChatsByRecency(merged);
+          });
+        }
+      });
+    }, 4000);
+
+    return () => clearInterval(intervalId);
   }, [user?.id]);
 
   const handleUpdateUser = (updatedFields) => {
@@ -288,6 +471,18 @@ const HomePage = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'clubs') {
+      // When returning to the clubs view, momentary chats with no chat history disappear from the left panel
+      setPeople((prev) => {
+        const hasTemp = prev.some((p) => p.isTemporary);
+        if (!hasTemp) return prev;
+        const cleaned = prev.filter((p) => !p.isTemporary);
+        setSelectedPersonId((currId) => {
+          const stillExists = cleaned.some((p) => p.id === currId);
+          return stillExists ? currId : (cleaned[0]?.id || null);
+        });
+        return cleaned;
+      });
+
       if (!selectedClubId && clubs.length > 0) {
         setSelectedClubId(clubs[0].id);
       }
@@ -319,17 +514,43 @@ const HomePage = () => {
   const handleStartDirectMessage = (targetProfile) => {
     const targetName = targetProfile?.username || targetProfile?.name || 'Member';
     const targetImg = targetProfile?.avatarUrl || targetProfile?.pfp || targetProfile?.img || defaultAvatar;
-    let person = people.find((p) => (p.name || p.username || '').toLowerCase() === targetName.toLowerCase());
-    if (!person) {
+
+    let existingPerson = people.find((p) =>
+      (targetProfile?.id && p.id && String(p.id) === String(targetProfile.id)) ||
+      (p.name || p.username || '').toLowerCase() === targetName.toLowerCase()
+    );
+
+    // Only applicable if the two accounts have no chat history
+    const historyExists = Boolean(
+      (existingPerson && !existingPerson.isTemporary && (existingPerson.lastMessage || existingPerson.hasSentMessage)) ||
+      hasDmHistory(existingPerson || targetProfile, user?.id)
+    );
+
+    let person;
+    if (existingPerson) {
+      person = {
+        ...existingPerson,
+        isTemporary: !historyExists
+      };
+    } else {
       person = {
         id: targetProfile?.id || Date.now(),
+        conversationId: targetProfile?.conversationId || null,
         name: targetName,
         username: targetName,
         img: targetImg,
-        role: targetProfile?.role || 'member'
+        role: targetProfile?.role || 'member',
+        status: targetProfile?.status || 'Offline',
+        isOnline: targetProfile?.isOnline || false,
+        isTemporary: !historyExists
       };
-      setPeople((prev) => [person, ...prev]);
     }
+
+    // Add chat to the user's chats (left panel) momentarily
+    setPeople((prev) => sortChatsByRecency([
+      person,
+      ...prev.filter((p) => p.id !== person.id && (p.name || '').toLowerCase() !== targetName.toLowerCase())
+    ]));
     setActiveTab('people');
     setSelectedPersonId(person.id);
   };
@@ -343,13 +564,15 @@ const HomePage = () => {
       if (matchIndex === -1) return prev;
       const updatedPerson = {
         ...prev[matchIndex],
+        isTemporary: false, // If the user actually sends a message, the chat persists in the left panel!
+        hasSentMessage: true,
         lastMessage: newMsg?.content || '',
         lastMessageAt: newMsg?.sentAt || new Date().toISOString()
       };
       const nextList = [...prev];
       nextList.splice(matchIndex, 1);
       nextList.unshift(updatedPerson);
-      return nextList;
+      return sortChatsByRecency(nextList);
     });
   };
 
