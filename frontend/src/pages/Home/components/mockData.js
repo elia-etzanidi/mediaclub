@@ -20,11 +20,7 @@ export const initialClubs = [
       { id: 3, name: 'theories', type: 'text' },
       { id: 4, name: 'reviews', type: 'text' }
     ], 
-    members: [
-      { id: 1, name: 'Alice Smith', img: defaultAvatar, role: 'moderator' },
-      { id: 2, name: 'Bob Jones', img: defaultAvatar, role: 'member' },
-      { id: 3, name: 'Charlie Day', img: defaultAvatar, role: 'member' }
-    ] 
+    members: [] 
   },
   { 
     id: 2, 
@@ -37,17 +33,11 @@ export const initialClubs = [
       { id: 2, name: 'spoilers', type: 'text' },
       { id: 3, name: 'episodes', type: 'text' }
     ], 
-    members: [
-      { id: 4, name: 'Diana Prince', img: defaultAvatar, role: 'moderator' },
-      { id: 5, name: 'Evan Wright', img: defaultAvatar, role: 'member' },
-      { id: 6, name: 'Fiona Gallagher', img: defaultAvatar, role: 'member' }
-    ] 
+    members: [] 
   }
 ];
 
-export const initialPeople = [
-  { id: 101, name: 'Alice Smith', img: defaultAvatar }
-];
+export const initialPeople = [];
 
 export const mockSearchResults = [
   {

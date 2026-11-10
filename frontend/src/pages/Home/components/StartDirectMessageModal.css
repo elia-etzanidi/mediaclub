@@ -203,9 +203,17 @@
   right: 0;
   width: 11px;
   height: 11px;
-  background-color: #22c55e;
   border: 2px solid var(--bg-panel);
   border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.start-dm-status-dot.online {
+  background-color: #22c55e;
+}
+
+.start-dm-status-dot.offline {
+  background-color: #9ca3af;
 }
 
 .start-dm-info {
@@ -269,18 +277,55 @@
 }
 
 .start-dm-empty {
-  padding: 40px 20px;
+  padding: 36px 20px;
   text-align: center;
   color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .start-dm-empty-icon {
   font-size: 2rem;
-  display: block;
-  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  opacity: 0.75;
 }
 
-.start-dm-empty-text {
+.start-dm-empty-heading {
+  margin: 0 0 6px 0;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.start-dm-empty-subtext {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  max-width: 320px;
+  line-height: 1.45;
+}
+
+.start-dm-empty-clear-btn {
+  margin-top: 14px;
+  background-color: rgba(0, 70, 67, 0.08);
+  color: var(--primary-dark);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.start-dm-empty-clear-btn:hover {
+  background-color: rgba(0, 70, 67, 0.16);
+  color: var(--primary-dark);
 }

@@ -2,79 +2,145 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import './StartDirectMessageModal.css';
 import defaultAvatar from '../../../assets/default-avatar.png';
+import { fetchClubMembersApi } from '../../../services/clubService';
 
 const StartDirectMessageModal = ({
   isOpen,
   onClose,
   clubs = [],
-  systemClubs = [],
   currentUser,
   onSelectUser
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [freshMembersByClub, setFreshMembersByClub] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Extract all unique members from joined clubs and system clubs, excluding the current user
+  // When modal is open, fetch fresh members from backend for each joined club
+  useEffect(() => {
+    if (!isOpen || !Array.isArray(clubs) || clubs.length === 0) {
+      setFreshMembersByClub({});
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    const numericClubIds = clubs
+      .map((c) => c?.id)
+      .filter((id) => typeof id === 'number');
+
+    if (numericClubIds.length > 0) {
+      setIsLoading(true);
+      Promise.all(
+        numericClubIds.map(async (clubId) => {
+          try {
+            const members = await fetchClubMembersApi(clubId);
+            return { clubId, members };
+          } catch (e) {
+            return null;
+          }
+        })
+      )
+        .then((results) => {
+          if (!isMounted) return;
+          const map = {};
+          results.forEach((res) => {
+            if (res && Array.isArray(res.members)) {
+              map[res.clubId] = res.members;
+            }
+          });
+          setFreshMembersByClub(map);
+        })
+        .finally(() => {
+          if (isMounted) setIsLoading(false);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, clubs]);
+
+  // Extract all unique members from joined clubs ONLY, strictly excluding self and dummy data
   const availableMembers = useMemo(() => {
     const memberMap = new Map();
-    const currentName = currentUser?.username?.toLowerCase() || 'demouser';
-    const currentId = currentUser?.id;
+    const currentName = (currentUser?.username || '').toLowerCase().trim();
+    const currentId = currentUser?.id ?? currentUser?.userId;
 
-    // Combine joined clubs and system clubs
-    const allClubs = [...(clubs || []), ...(systemClubs || [])];
+    // Names of legacy dummy mock users to filter out if lingering in local caches
+    const DUMMY_NAMES = new Set([
+      'alice smith',
+      'bob jones',
+      'charlie day',
+      'diana prince',
+      'evan wright',
+      'fiona gallagher'
+    ]);
 
-    allClubs.forEach((club) => {
-      if (Array.isArray(club.members)) {
-        club.members.forEach((m) => {
-          const name = m.name || m.username;
-          if (!name) return;
-          const lowerName = name.toLowerCase();
+    // ONLY iterate over clubs the user has joined (clubs prop)
+    (clubs || []).forEach((club) => {
+      if (!club) return;
+      const clubMembers = freshMembersByClub[club.id] || club.members;
+      if (!Array.isArray(clubMembers)) return;
 
-          // Exclude self
-          if (lowerName === currentName || (currentId && m.id === currentId)) {
-            return;
+      clubMembers.forEach((m) => {
+        if (!m) return;
+        const rawName = m.username || m.name;
+        if (!rawName) return;
+        const name = String(rawName).trim();
+        const lowerName = name.toLowerCase();
+        const memberId = m.userId ?? m.id;
+
+        // Exclude the current user themselves
+        const isSelf =
+          (currentId != null && memberId != null && String(memberId) === String(currentId)) ||
+          (currentName && lowerName === currentName);
+
+        if (isSelf) return;
+
+        // Exclude legacy mock dummy users without a valid backend joined date or userId
+        if (DUMMY_NAMES.has(lowerName) && !m.joinedAt && typeof m.userId !== 'number') {
+          return;
+        }
+
+        const mapKey = memberId != null ? `id_${memberId}` : `name_${lowerName}`;
+        const clubName = club.name || 'Club';
+
+        if (memberMap.has(mapKey)) {
+          const existing = memberMap.get(mapKey);
+          if (clubName && !existing.clubs.includes(clubName)) {
+            existing.clubs.push(clubName);
           }
-
-          if (memberMap.has(lowerName)) {
-            const existing = memberMap.get(lowerName);
-            if (!existing.clubs.includes(club.name)) {
-              existing.clubs.push(club.name);
-            }
-          } else {
-            memberMap.set(lowerName, {
-              id: m.id || Date.now() + Math.floor(Math.random() * 1000),
-              name: name,
-              username: name,
-              img: m.img || m.avatarUrl || defaultAvatar,
-              role: m.role || 'member',
-              clubs: [club.name]
-            });
+          if (m.isOnline || m.status === 'Online' || m.status === 'ONLINE') {
+            existing.isOnline = true;
+            existing.status = 'Online';
           }
-        });
-      }
-    });
-
-    // If list is empty (e.g. brand new user with no clubs yet), provide default community members
-    if (memberMap.size === 0) {
-      const defaultPresets = [
-        { id: 101, name: 'Alice Smith', username: 'Alice Smith', role: 'moderator', clubs: ['Inception'] },
-        { id: 102, name: 'Bob Jones', username: 'Bob Jones', role: 'member', clubs: ['Inception', 'Breaking Bad'] },
-        { id: 103, name: 'Charlie Day', username: 'Charlie Day', role: 'member', clubs: ['Inception'] },
-        { id: 104, name: 'Diana Prince', username: 'Diana Prince', role: 'moderator', clubs: ['Breaking Bad'] }
-      ];
-      defaultPresets.forEach((dp) => {
-        if (dp.username.toLowerCase() !== currentName) {
-          memberMap.set(dp.username.toLowerCase(), {
-            ...dp,
-            img: defaultAvatar
+          if (m.role === 'moderator') {
+            existing.role = 'moderator';
+          }
+        } else {
+          const isOnline = Boolean(m.isOnline || m.status === 'Online' || m.status === 'ONLINE');
+          memberMap.set(mapKey, {
+            id: memberId || m.id || Date.now(),
+            userId: memberId || m.userId,
+            name: name,
+            username: m.username || name,
+            img: m.avatarUrl || m.img || defaultAvatar,
+            avatarUrl: m.avatarUrl || m.img || defaultAvatar,
+            role: (m.role || 'member').toLowerCase(),
+            status: isOnline ? 'Online' : 'Offline',
+            isOnline,
+            clubs: clubName ? [clubName] : []
           });
         }
       });
-    }
+    });
 
-    return Array.from(memberMap.values());
-  }, [clubs, systemClubs, currentUser]);
+    return Array.from(memberMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+  }, [clubs, freshMembersByClub, currentUser]);
 
   // Filter members based on search
   const filteredMembers = useMemo(() => {
@@ -166,7 +232,7 @@ const StartDirectMessageModal = ({
             </div>
             <div>
               <h2 id="start-dm-title" className="start-dm-title">New Direct Message</h2>
-              <p className="start-dm-subtitle">Select a club member to start a private conversation</p>
+              <p className="start-dm-subtitle">Select a member who shares clubs with you</p>
             </div>
           </div>
           <button
@@ -189,9 +255,10 @@ const StartDirectMessageModal = ({
             ref={searchInputRef}
             type="text"
             className="start-dm-search-input"
-            placeholder="Search by name or club..."
+            placeholder={availableMembers.length > 0 ? "Search by name or club..." : "Search members..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={availableMembers.length === 0}
           />
           {searchTerm && (
             <button
@@ -232,7 +299,11 @@ const StartDirectMessageModal = ({
                       e.target.src = defaultAvatar;
                     }}
                   />
-                  <span className="start-dm-status-dot" aria-hidden="true" />
+                  <span
+                    className={`start-dm-status-dot ${member.isOnline ? 'online' : 'offline'}`}
+                    aria-hidden="true"
+                    title={member.isOnline ? 'Online' : 'Offline'}
+                  />
                 </div>
                 <div className="start-dm-info">
                   <div className="start-dm-name-row">
@@ -262,10 +333,48 @@ const StartDirectMessageModal = ({
                 </button>
               </div>
             ))
+          ) : searchTerm.trim() ? (
+            <div className="start-dm-empty">
+              <span className="start-dm-empty-icon" aria-hidden="true">🔍</span>
+              <h3 className="start-dm-empty-heading">No members found</h3>
+              <p className="start-dm-empty-subtext">No members in your clubs match "{searchTerm}"</p>
+              <button
+                type="button"
+                className="start-dm-empty-clear-btn"
+                onClick={() => setSearchTerm('')}
+              >
+                Clear Search
+              </button>
+            </div>
+          ) : (!clubs || clubs.length === 0) ? (
+            <div className="start-dm-empty">
+              <span className="start-dm-empty-icon" aria-hidden="true">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </span>
+              <h3 className="start-dm-empty-heading">No clubs joined yet</h3>
+              <p className="start-dm-empty-subtext">
+                Direct messages can only be sent to members who share clubs with you. Join a club to start chatting!
+              </p>
+            </div>
           ) : (
             <div className="start-dm-empty">
-              <span className="start-dm-empty-icon">🔍</span>
-              <p className="start-dm-empty-text">No members found matching "{searchTerm}"</p>
+              <span className="start-dm-empty-icon" aria-hidden="true">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </span>
+              <h3 className="start-dm-empty-heading">No other members in your clubs</h3>
+              <p className="start-dm-empty-subtext">
+                None of the clubs you belong to have other members yet. When other people join your clubs, they will appear here.
+              </p>
             </div>
           )}
         </div>

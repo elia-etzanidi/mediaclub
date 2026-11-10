@@ -988,7 +988,6 @@ const HomePage = () => {
           isOpen={isStartDmModalOpen}
           onClose={() => setIsStartDmModalOpen(false)}
           clubs={clubs}
-          systemClubs={systemClubs}
           currentUser={user}
           onSelectUser={handleStartDirectMessage}
         />
