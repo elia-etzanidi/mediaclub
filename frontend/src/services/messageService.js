@@ -364,26 +364,64 @@ export const removeLocalMessage = (clubId, channelId, messageId) => {
   }
 };
 
+// Check if current user is the author of a message
+export const canUserDeleteMessage = (msg, currentUser) => {
+  if (!currentUser || !msg) return false;
+
+  const currentUsername = (currentUser.username || currentUser.name || '').trim().toLowerCase();
+  const senderUsername = (msg.senderUsername || msg.senderName || '').trim().toLowerCase();
+
+  // Local messages posted with fallback 'You' belong to the current client session
+  if (senderUsername === 'you') {
+    return true;
+  }
+
+  // When usernames are present on both, they must match exactly
+  if (currentUsername && senderUsername) {
+    return currentUsername === senderUsername;
+  }
+
+  // Fall back to ID matching if username is missing on one of them
+  const currentUserId = currentUser.id != null ? currentUser.id : currentUser.userId;
+  const msgSenderId = msg.senderId != null ? msg.senderId : msg.userId;
+
+  if (currentUserId != null && msgSenderId != null) {
+    return String(currentUserId) === String(msgSenderId);
+  }
+
+  return false;
+};
+
 // Delete a message
-export const deleteChannelMessage = async (clubId, channelId, messageId) => {
+export const deleteChannelMessage = async (clubId, channelId, messageId, currentUser = null) => {
   const token = localStorage.getItem('token');
   if (token && typeof messageId === 'number') {
     try {
-      await fetch(`/api/messages/${messageId}`, {
+      const res = await fetch(`/api/messages/${messageId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) {
+        console.warn('Backend deleteChannelMessage failed with status:', res.status);
+        return null;
+      }
     } catch (err) {
       console.warn('Backend deleteChannelMessage failed:', err);
+      return null;
     }
   }
 
-  // Always remove or mark deleted in local storage
+  // Always remove or mark deleted in local storage, verifying ownership if currentUser is passed
   const localKey = getStorageKey(clubId, channelId);
   try {
     const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const targetMsg = existing.find((m) => m.id === messageId);
+    if (targetMsg && currentUser && !canUserDeleteMessage(targetMsg, currentUser)) {
+      console.warn("Cannot delete someone else's message");
+      return existing;
+    }
     const updated = existing.filter((m) => m.id !== messageId);
     localStorage.setItem(localKey, JSON.stringify(updated));
     return updated;

@@ -110,11 +110,9 @@ public class MessageService {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
 
-        Long clubId = message.getChannel().getClub().getId();
         boolean isOwnMessage = message.getSender().getId().equals(requesterUserId);
-        boolean isModerator = isModeratorOf(clubId, requesterUserId);
 
-        if (!isOwnMessage && !isModerator && !requesterIsGlobalAdmin) {
+        if (!isOwnMessage && !requesterIsGlobalAdmin) {
             throw new ForbiddenException("You don't have permission to delete this message");
         }
 

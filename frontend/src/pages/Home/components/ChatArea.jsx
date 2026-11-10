@@ -5,6 +5,7 @@ import {
   fetchChannelMessages,
   sendChannelMessage,
   deleteChannelMessage,
+  canUserDeleteMessage,
   toggleMessageReaction,
   saveMessageToLocal,
   updateLocalMessagesReactions,
@@ -288,17 +289,25 @@ const ChatArea = ({
     }
   };
 
-  // Delete message
+  // Delete message (only author can delete)
   const handleRequestDelete = (msg) => {
+    if (!canDeleteMessage(msg)) return;
     setMessageToDelete(msg);
   };
 
   const handleConfirmDelete = async () => {
-    if (!messageToDelete || isDeletingMessage) return;
+    if (!messageToDelete || !canDeleteMessage(messageToDelete) || isDeletingMessage) return;
     setIsDeletingMessage(true);
     try {
-      const updated = await deleteChannelMessage(club.id, activeChannel.id, messageToDelete.id);
-      setMessages(updated);
+      const updated = await deleteChannelMessage(
+        club.id,
+        activeChannel.id,
+        messageToDelete.id,
+        currentUser
+      );
+      if (Array.isArray(updated)) {
+        setMessages(updated);
+      }
       setMessageToDelete(null);
     } catch (err) {
       console.error('Failed to delete message:', err);
@@ -488,20 +497,9 @@ const ChatArea = ({
     );
   }, [messages, searchQuery]);
 
-  // Determine if current user can delete a message
+  // Determine if current user can delete a message (users can only delete their own message)
   const canDeleteMessage = (msg) => {
-    if (!currentUser) return false;
-    const isOwn =
-      msg.senderId === currentUser.id ||
-      msg.senderUsername?.toLowerCase() === currentUser.username?.toLowerCase();
-    const isModerator =
-      currentUser.isGlobalAdmin ||
-      club?.members?.some(
-        (m) =>
-          (m.id === currentUser.id || m.name?.toLowerCase() === currentUser.username?.toLowerCase()) &&
-          m.role?.toLowerCase() === 'moderator'
-      );
-    return isOwn || isModerator;
+    return canUserDeleteMessage(msg, currentUser);
   };
 
   return (

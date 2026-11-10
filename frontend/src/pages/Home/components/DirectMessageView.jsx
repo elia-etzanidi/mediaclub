@@ -238,11 +238,15 @@ const DirectMessageView = ({
 
   // Check if message was sent by current user
   const isMessageFromSelf = (msg) => {
-    if (!currentUser) return false;
-    if (msg.senderId && currentUser.id && msg.senderId === currentUser.id) return true;
-    const myName = (currentUser.username || 'demouser').toLowerCase();
-    const sender = (msg.senderUsername || '').toLowerCase();
-    return sender === myName || sender === 'you';
+    if (!currentUser || !msg) return false;
+    const myName = (currentUser.username || currentUser.name || '').trim().toLowerCase();
+    const sender = (msg.senderUsername || msg.senderName || '').trim().toLowerCase();
+    if (sender === 'you') return true;
+    if (myName && sender) return myName === sender;
+    if (msg.senderId != null && currentUser.id != null) {
+      return String(msg.senderId) === String(currentUser.id);
+    }
+    return false;
   };
 
   // Filter messages by search query
