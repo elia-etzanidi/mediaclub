@@ -213,6 +213,37 @@ public class ClubService {
 
         targetMembership.setRole(MembershipRole.MODERATOR);
         membershipRepository.save(targetMembership);
+        membershipRepository.flush();
+
+        messagingTemplate.convertAndSend(
+                "/topic/club/" + clubId + "/presence",
+                new PresenceEvent(clubId, targetUserId, targetMembership.getUser().getUsername(), PresenceEvent.PresenceEventType.ROLE_CHANGED, "moderator")
+        );
+    }
+
+    @Transactional
+    public void demoteToMember(Long clubId, Long targetUserId, Long requesterUserId, boolean requesterIsGlobalAdmin) {
+        requireModerator(clubId, requesterUserId, requesterIsGlobalAdmin);
+
+        List<Membership> memberships = membershipRepository.findByClubId(clubId);
+        long modCount = memberships.stream()
+                .filter(m -> m.getRole() == MembershipRole.MODERATOR)
+                .count();
+        if (modCount <= 1) {
+            throw new BadRequestException("A club must have at least one moderator");
+        }
+
+        Membership targetMembership = membershipRepository.findByUserIdAndClubId(targetUserId, clubId)
+                .orElseThrow(() -> new ResourceNotFoundException("That user is not a member of this club"));
+
+        targetMembership.setRole(MembershipRole.MEMBER);
+        membershipRepository.save(targetMembership);
+        membershipRepository.flush();
+
+        messagingTemplate.convertAndSend(
+                "/topic/club/" + clubId + "/presence",
+                new PresenceEvent(clubId, targetUserId, targetMembership.getUser().getUsername(), PresenceEvent.PresenceEventType.ROLE_CHANGED, "member")
+        );
     }
 
     @Transactional

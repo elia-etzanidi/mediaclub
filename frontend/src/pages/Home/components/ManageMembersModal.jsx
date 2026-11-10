@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import './ManageMembersModal.css';
-import { promoteMemberApi, kickMemberApi } from '../../../services/clubService';
+import { promoteMemberApi, demoteMemberApi, kickMemberApi } from '../../../services/clubService';
 import defaultAvatar from '../../../assets/default-avatar.png';
 
 const ManageMembersModal = ({
@@ -84,11 +84,14 @@ const ManageMembersModal = ({
       return;
     }
 
-    const updatedMembers = membersList.map((m) =>
-      (m.id && member.id ? m.id === member.id : m.name === member.name)
-        ? { ...m, role: 'member' }
-        : m
-    );
+    const memberId = member.id || member.userId;
+    const updatedMembers = membersList.map((m) => {
+      const isMatch =
+        (m.id && memberId && String(m.id) === String(memberId)) ||
+        (m.userId && memberId && String(m.userId) === String(memberId)) ||
+        ((m.name || m.username || '').toLowerCase() === (member.name || member.username || '').toLowerCase());
+      return isMatch ? { ...m, role: 'member' } : m;
+    });
 
     if (onUpdateClub) {
       onUpdateClub({
@@ -98,7 +101,11 @@ const ManageMembersModal = ({
     }
 
     if (showToast) {
-      showToast(`Demoted ${member.name} to Member.`);
+      showToast(`Demoted ${member.name || member.username} to Member.`);
+    }
+
+    if (memberId && club?.id) {
+      await demoteMemberApi(club.id, memberId);
     }
   };
 

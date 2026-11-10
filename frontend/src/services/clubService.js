@@ -291,6 +291,24 @@ export const promoteMemberApi = async (clubId, targetUserId) => {
   return false;
 };
 
+export const demoteMemberApi = async (clubId, targetUserId) => {
+  const token = localStorage.getItem('token');
+  if (!token || !clubId || !targetUserId) return false;
+
+  try {
+    const res = await fetch(`/api/clubs/${clubId}/members/${targetUserId}/demote`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Backend demoteMemberApi request failed:', err);
+  }
+  return false;
+};
+
 export const kickMemberApi = async (clubId, targetUserId) => {
   const token = localStorage.getItem('token');
   if (!token || !clubId || !targetUserId) return false;

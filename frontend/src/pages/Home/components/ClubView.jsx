@@ -37,6 +37,7 @@ const ClubView = ({
       const isOnline = event.type === 'ONLINE' || event.type === 'JOINED';
       const isOffline = event.type === 'OFFLINE';
       const isLeft = event.type === 'LEFT';
+      const isRoleChanged = event.type === 'ROLE_CHANGED';
       const eventUserId = event.userId;
       const eventUsername = (event.username || '').toLowerCase();
 
@@ -65,10 +66,12 @@ const ClubView = ({
 
           if (isMatch) {
             const onlineNow = isOnline ? true : (isOffline ? false : m.isOnline);
+            const roleNow = isRoleChanged && event.role ? event.role.toLowerCase() : m.role;
             return {
               ...m,
               isOnline: onlineNow,
-              status: onlineNow ? 'Online' : 'Offline'
+              status: onlineNow ? 'Online' : 'Offline',
+              role: roleNow
             };
           }
           return m;

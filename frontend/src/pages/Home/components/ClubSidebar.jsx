@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import EditChannelsModal from './EditChannelsModal';
 import ManageMembersModal from './ManageMembersModal';
 import LeaveClubModal from './LeaveClubModal';
+import AssignModeratorModal from './AssignModeratorModal';
+import { promoteMemberApi } from '../../../services/clubService';
 
 const ClubSidebar = ({
   club,
@@ -18,6 +20,7 @@ const ClubSidebar = ({
   const [isEditChannelsOpen, setIsEditChannelsOpen] = useState(false);
   const [isManageMembersOpen, setIsManageMembersOpen] = useState(false);
   const [isLeaveClubOpen, setIsLeaveClubOpen] = useState(false);
+  const [isAssignModeratorOpen, setIsAssignModeratorOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const menuContainerRef = useRef(null);
@@ -33,25 +36,49 @@ const ClubSidebar = ({
     activeChannelsList[0];
 
   // Determine if current user is moderator
-  const userMember = club?.members?.find(
-    (m) =>
-      m.id === currentUser?.id ||
-      m.name?.toLowerCase() === currentUser?.username?.toLowerCase()
-  );
+  const userMember = club?.members?.find((m) => {
+    const mId = m.id || m.userId;
+    const cId = currentUser?.id || currentUser?.userId;
+    const isIdMatch = mId && cId && String(mId) === String(cId);
+    const mName = (m.username || m.name || '').toLowerCase();
+    const cName = (currentUser?.username || currentUser?.name || '').toLowerCase();
+    const isNameMatch = mName && cName && mName === cName;
+    return isIdMatch || isNameMatch;
+  });
 
   const isActualModerator = Boolean(
     currentUser?.isGlobalAdmin ||
     userMember?.role?.toLowerCase() === 'moderator' ||
     userMember?.role?.toLowerCase() === 'admin' ||
-    // If club was created by current user
+    // If club was created by current user and they are the sole member
     (club?.members?.length === 1 &&
-      club.members[0].name?.toLowerCase() === currentUser?.username?.toLowerCase()) ||
-    // If no explicit moderator, first member is moderator
-    (!club?.members?.some((m) => m.role?.toLowerCase() === 'moderator') &&
-      club?.members?.[0]?.name?.toLowerCase() === currentUser?.username?.toLowerCase())
+      ((userMember?.name || userMember?.username || '').toLowerCase() === (currentUser?.username || '').toLowerCase())) ||
+    // If no explicit moderator exists in the club, first member is moderator
+    (!club?.members?.some((m) => (m.role || '').toLowerCase() === 'moderator') &&
+      ((club?.members?.[0]?.name || club?.members?.[0]?.username || '').toLowerCase() === (currentUser?.username || '').toLowerCase()))
   );
 
   const isModerator = isActualModerator;
+
+  // Find eligible members (everyone except current user)
+  const eligibleMembers = (club?.members || []).filter((m) => {
+    const isSelf =
+      (m.id && currentUser?.id && String(m.id) === String(currentUser.id)) ||
+      ((m.name || m.username || '').toLowerCase() === (currentUser?.username || '').toLowerCase());
+    return !isSelf;
+  });
+
+  // Check if there are any other moderators in the club
+  const otherModerators = (club?.members || []).filter((m) => {
+    const isSelf =
+      (m.id && currentUser?.id && String(m.id) === String(currentUser.id)) ||
+      ((m.name || m.username || '').toLowerCase() === (currentUser?.username || '').toLowerCase());
+    const isMod =
+      (m.role || '').toLowerCase() === 'moderator' || (m.role || '').toLowerCase() === 'admin';
+    return !isSelf && isMod;
+  });
+
+  const isLastModerator = isModerator && otherModerators.length === 0;
 
   // Handle outside click to close dropdown menu
   useEffect(() => {
@@ -181,11 +208,56 @@ const ClubSidebar = ({
   // Leave Club Modal Handlers
   const handleOpenLeaveModal = () => {
     setIsMenuOpen(false);
-    setIsLeaveClubOpen(true);
+    if (isLastModerator && eligibleMembers.length > 0) {
+      setIsAssignModeratorOpen(true);
+    } else {
+      setIsLeaveClubOpen(true);
+    }
   };
 
   const handleConfirmLeave = () => {
     setIsLeaveClubOpen(false);
+    if (isLastModerator && eligibleMembers.length > 0) {
+      setIsAssignModeratorOpen(true);
+      return;
+    }
+    if (onLeaveClub && club?.id) {
+      onLeaveClub(club.id);
+    }
+  };
+
+  const handleAssignAndLeave = async (selectedMembers) => {
+    setIsAssignModeratorOpen(false);
+    if (!selectedMembers || selectedMembers.length === 0) return;
+
+    // 1. Promote chosen 1-2 members to moderator
+    for (const member of selectedMembers) {
+      const memberId = member.id || member.userId;
+      if (memberId && club?.id) {
+        await promoteMemberApi(club.id, memberId);
+      }
+    }
+
+    // 2. Update local club members role so open views immediately reflect the new moderators
+    if (onUpdateClub && club) {
+      const selectedIdSet = new Set(selectedMembers.map((m) => String(m.id || m.userId)));
+      const updatedMembers = (club.members || []).map((m) => {
+        if (selectedIdSet.has(String(m.id || m.userId))) {
+          return { ...m, role: 'moderator' };
+        }
+        return m;
+      });
+      onUpdateClub({
+        ...club,
+        members: updatedMembers
+      });
+    }
+
+    // 3. Show confirmation toast
+    const names = selectedMembers.map((m) => m.name || m.username).join(' & ');
+    showToast(`✓ Promoted ${names} to Moderator!`);
+
+    // 4. Leave the club
     if (onLeaveClub && club?.id) {
       onLeaveClub(club.id);
     }
@@ -542,6 +614,16 @@ const ClubSidebar = ({
         clubName={activeClubName}
         onConfirm={handleConfirmLeave}
         onClose={() => setIsLeaveClubOpen(false)}
+      />
+
+      {/* Assign New Moderator Modal when last moderator decides to leave */}
+      <AssignModeratorModal
+        isOpen={isAssignModeratorOpen}
+        club={club}
+        clubName={activeClubName}
+        members={eligibleMembers}
+        onAssignAndLeave={handleAssignAndLeave}
+        onClose={() => setIsAssignModeratorOpen(false)}
       />
 
       {/* Toast Notification for Link Copying & Settings */}

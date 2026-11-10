@@ -1,0 +1,501 @@
+/* AssignModeratorModal.css - Modal for last moderator selecting 1-2 new moderators before leaving */
+
+.assign-mod-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 26, 24, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  padding: 16px;
+  animation: assignModFadeIn 0.18s ease-out;
+}
+
+@keyframes assignModFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.assign-mod-modal {
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--bg-panel, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(0, 70, 67, 0.15));
+  border-radius: 16px;
+  box-shadow:
+    0 24px 56px rgba(0, 70, 67, 0.24),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: assignModScaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  max-height: 90vh;
+}
+
+@keyframes assignModScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* --- Modal Header --- */
+.assign-mod-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px 22px;
+  background: var(--bg-panel, #ffffff);
+  border-bottom: 1px solid rgba(0, 70, 67, 0.08);
+  flex-shrink: 0;
+}
+
+.assign-mod-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.assign-mod-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15);
+}
+
+.assign-mod-title {
+  font-family: var(--font-heading, 'Fraunces', serif);
+  font-size: 1.22rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main, #112625);
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+}
+
+.assign-mod-club-subtitle {
+  font-size: 0.84rem;
+  color: var(--text-muted, #5f7a78);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  margin-top: 2px;
+}
+
+.assign-mod-close-btn {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #5f7a78);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.assign-mod-close-btn:hover:not(:disabled) {
+  background: rgba(0, 70, 67, 0.08);
+  color: var(--text-main, #112625);
+}
+
+.assign-mod-close-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- Modal Body --- */
+.assign-mod-body {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Notice Banner */
+.assign-mod-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(245, 158, 11, 0.09);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 10px;
+  color: #92400e;
+}
+
+.assign-mod-notice-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.assign-mod-notice-text {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #78350f;
+}
+
+.assign-mod-notice-text strong {
+  font-weight: 700;
+  color: #451a03;
+}
+
+/* Section Label Row */
+.assign-mod-counter-row {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.assign-mod-selection-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted, #5f7a78);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* Search Wrap */
+.assign-mod-search-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg-main, #f0f7f6);
+  border: 1px solid var(--border-subtle, rgba(0, 70, 67, 0.15));
+  border-radius: 10px;
+  padding: 0 12px;
+  gap: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.assign-mod-search-wrap:focus-within {
+  border-color: var(--primary-dark, #004643);
+  box-shadow: 0 0 0 3px rgba(0, 70, 67, 0.1);
+  background: #ffffff;
+}
+
+.assign-mod-search-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted, #5f7a78);
+  flex-shrink: 0;
+}
+
+.assign-mod-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 0.88rem;
+  color: var(--text-main, #112625);
+  outline: none;
+}
+
+.assign-mod-search-input::placeholder {
+  color: var(--text-placeholder, #8fa7a5);
+}
+
+.assign-mod-search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #5f7a78);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.assign-mod-search-clear:hover {
+  color: var(--text-main, #112625);
+}
+
+/* Member List */
+.assign-mod-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for list */
+.assign-mod-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.assign-mod-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 70, 67, 0.15);
+  border-radius: 4px;
+}
+
+.assign-mod-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 70, 67, 0.3);
+}
+
+.assign-mod-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--bg-main, #f0f7f6);
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.assign-mod-member-row:hover:not(.max-disabled) {
+  background: #e6f2f0;
+  border-color: rgba(0, 70, 67, 0.12);
+}
+
+.assign-mod-member-row.selected {
+  background: rgba(0, 70, 67, 0.08);
+  border-color: var(--primary-dark, #004643);
+}
+
+.assign-mod-member-row.max-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.assign-mod-member-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Custom Checkbox */
+.assign-mod-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--text-muted, #5f7a78);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.assign-mod-checkbox.checked {
+  background: var(--primary-dark, #004643);
+  border-color: var(--primary-dark, #004643);
+}
+
+.assign-mod-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--primary-light, #abd1c6);
+  border: 1px solid rgba(0, 70, 67, 0.12);
+}
+
+.assign-mod-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.assign-mod-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main, #112625);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assign-mod-username {
+  font-size: 0.78rem;
+  color: var(--text-muted, #5f7a78);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assign-mod-member-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assign-mod-status-online {
+  font-size: 0.76rem;
+  color: #059669;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.online-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  display: inline-block;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.assign-mod-status-offline {
+  font-size: 0.76rem;
+  color: var(--text-placeholder, #8fa7a5);
+}
+
+.assign-mod-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text-muted, #5f7a78);
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+/* --- Modal Footer --- */
+.assign-mod-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px 18px 22px;
+  background: var(--bg-panel, #ffffff);
+  border-top: 1px solid rgba(0, 70, 67, 0.08);
+  flex-shrink: 0;
+}
+
+.assign-mod-btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(0, 70, 67, 0.18));
+  color: var(--text-main, #112625);
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.assign-mod-btn-cancel:hover:not(:disabled) {
+  background: rgba(0, 70, 67, 0.05);
+  border-color: rgba(0, 70, 67, 0.3);
+}
+
+.assign-mod-btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.assign-mod-btn-confirm {
+  background: #dc2626;
+  border: 1px solid #b91c1c;
+  color: #ffffff;
+  padding: 9px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+
+.assign-mod-btn-confirm:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #991b1b;
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.35);
+  transform: translateY(-1px);
+}
+
+.assign-mod-btn-confirm:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.2);
+}
+
+.assign-mod-btn-confirm:disabled {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.assign-mod-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: assignModSpin 0.6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes assignModSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .assign-mod-modal {
+    max-width: 95vw;
+  }
+  .assign-mod-header {
+    padding: 14px 16px;
+  }
+  .assign-mod-body {
+    padding: 14px 16px;
+  }
+  .assign-mod-footer {
+    padding: 12px 16px;
+    flex-direction: column-reverse;
+  }
+  .assign-mod-btn-cancel,
+  .assign-mod-btn-confirm {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -92,6 +92,14 @@ public class ClubController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{clubId}/members/{targetUserId}/demote")
+    public ResponseEntity<Void> demoteMember(@PathVariable Long clubId, @PathVariable Long targetUserId) {
+        Long userId = currentUserProvider.getCurrentUserId();
+        boolean isAdmin = currentUserProvider.getCurrentUser().getUser().isGlobalAdmin();
+        clubService.demoteToMember(clubId, targetUserId, userId, isAdmin);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{clubId}/members/{targetUserId}")
     public ResponseEntity<Void> kickMember(@PathVariable Long clubId, @PathVariable Long targetUserId) {
         Long userId = currentUserProvider.getCurrentUserId();
