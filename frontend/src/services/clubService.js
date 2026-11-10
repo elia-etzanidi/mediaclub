@@ -97,6 +97,26 @@ export const fetchAllClubsApi = async () => {
   return null;
 };
 
+export const fetchClubApi = async (clubId) => {
+  const token = localStorage.getItem('token');
+  if (!token || !clubId || typeof clubId !== 'number') return null;
+
+  try {
+    const res = await fetch(`/api/clubs/${clubId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return normalizeClub(data);
+    }
+  } catch (err) {
+    console.warn('Backend fetchClubApi failed:', err);
+  }
+  return null;
+};
+
 export const fetchClubMembersApi = async (clubId) => {
   const token = localStorage.getItem('token');
   if (!token || !clubId || typeof clubId !== 'number') return null;

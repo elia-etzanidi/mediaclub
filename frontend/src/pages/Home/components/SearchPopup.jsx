@@ -9,6 +9,7 @@ const SearchPopup = ({
   onCreateClub,
   joinedClubTitles = [],
   existingClubTitles = [],
+  systemClubs = [],
   isLoading = false
 }) => {
   const filterOptions = [
@@ -50,11 +51,18 @@ const SearchPopup = ({
         ) : results.length > 0 ? (
           <div className="search-results-list">
             {results.map((item) => {
+              const itemTitle = (item.title || item.name || '').toLowerCase();
               const isJoined = joinedClubTitles.some(
-                (t) => t.toLowerCase() === item.title.toLowerCase()
+                (t) => (t || '').toLowerCase() === itemTitle
               );
-              const clubExists = existingClubTitles.some(
-                (t) => t.toLowerCase() === item.title.toLowerCase()
+              const matchedClub = (systemClubs || []).find(
+                (c) =>
+                  (c.name && c.name.toLowerCase() === itemTitle) ||
+                  (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
+                  (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
+              );
+              const clubExists = Boolean(matchedClub) || existingClubTitles.some(
+                (t) => (t || '').toLowerCase() === itemTitle
               );
 
               const subText = item.type === 'books'
@@ -68,7 +76,7 @@ const SearchPopup = ({
                   onClick={() => {
                     if (isJoined) return;
                     if (clubExists) {
-                      if (onJoinClub) onJoinClub(item);
+                      if (onJoinClub) onJoinClub(matchedClub || item);
                     } else {
                       if (onCreateClub) onCreateClub(item);
                     }
@@ -103,7 +111,7 @@ const SearchPopup = ({
                         className="search-result-join-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (onJoinClub) onJoinClub(item);
+                          if (onJoinClub) onJoinClub(matchedClub || item);
                         }}
                       >
                         Join Club

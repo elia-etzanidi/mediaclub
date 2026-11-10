@@ -134,13 +134,36 @@ public class ClubService {
     public void leaveClub(Long clubId, Long userId) {
         Membership membership = membershipRepository.findByUserIdAndClubId(userId, clubId)
                 .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this club"));
+        boolean wasModerator = membership.getRole() == MembershipRole.MODERATOR;
         String username = membership.getUser().getUsername();
         membershipRepository.delete(membership);
+        membershipRepository.flush();
 
-        messagingTemplate.convertAndSend(
-                "/topic/club/" + clubId + "/presence",
-                new PresenceEvent(clubId, userId, username, PresenceEvent.PresenceEventType.LEFT)
-        );
+        List<Membership> remaining = membershipRepository.findByClubId(clubId);
+        if (remaining.isEmpty()) {
+            // No users remain in this club - delete the club cleanly
+            Club club = getClubOrThrow(clubId);
+            reactionRepository.deleteByMessage_Channel_ClubId(clubId);
+            messageRepository.deleteByChannel_ClubId(clubId);
+            notificationPreferenceRepository.deleteByClubId(clubId);
+            channelRepository.deleteByClubId(clubId);
+            clubRepository.delete(club);
+        } else {
+            // Another user is also in that club - do not delete the club!
+            // If the user who left was the only moderator, promote a remaining member
+            boolean hasOtherModerator = remaining.stream()
+                    .anyMatch(m -> m.getRole() == MembershipRole.MODERATOR);
+            if (wasModerator && !hasOtherModerator) {
+                Membership newMod = remaining.get(0);
+                newMod.setRole(MembershipRole.MODERATOR);
+                membershipRepository.save(newMod);
+            }
+
+            messagingTemplate.convertAndSend(
+                    "/topic/club/" + clubId + "/presence",
+                    new PresenceEvent(clubId, userId, username, PresenceEvent.PresenceEventType.LEFT)
+            );
+        }
     }
 
     public List<MembershipResponse> getMembers(Long clubId, String searchQuery) {

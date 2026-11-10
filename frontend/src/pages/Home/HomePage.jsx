@@ -18,6 +18,7 @@ import { getCurrentUser, getUserProfile, getToken } from '../../services/authSer
 import {
   fetchMyClubsApi,
   fetchAllClubsApi,
+  fetchClubApi,
   joinClubApi,
   createClubApi,
   leaveClubApi,
@@ -184,32 +185,6 @@ const HomePage = () => {
       }
     });
 
-    const handleSyncOnFocus = () => {
-      const token = getToken();
-      if (!token) return;
-
-      websocketService.connect();
-
-      fetchMyClubsApi().then((freshClubs) => {
-        if (Array.isArray(freshClubs)) {
-          setClubs(freshClubs);
-        }
-      });
-    };
-
-    window.addEventListener('focus', handleSyncOnFocus);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        handleSyncOnFocus();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      window.removeEventListener('focus', handleSyncOnFocus);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-
     fetchAllClubsApi().then((allClubs) => {
       if (Array.isArray(allClubs) && allClubs.length > 0) {
         setSystemClubs(allClubs);
@@ -229,6 +204,38 @@ const HomePage = () => {
         }
       }
     });
+
+    const handleSyncOnFocus = () => {
+      const token = getToken();
+      if (!token) return;
+
+      websocketService.connect();
+
+      fetchMyClubsApi().then((freshClubs) => {
+        if (Array.isArray(freshClubs)) {
+          setClubs(freshClubs);
+        }
+      });
+
+      fetchAllClubsApi().then((freshSystem) => {
+        if (Array.isArray(freshSystem) && freshSystem.length > 0) {
+          setSystemClubs(freshSystem);
+        }
+      });
+    };
+
+    window.addEventListener('focus', handleSyncOnFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        handleSyncOnFocus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleSyncOnFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [user?.id]);
 
   const handleUpdateUser = (updatedFields) => {
@@ -369,8 +376,29 @@ const HomePage = () => {
   const handleJoinClub = async (item) => {
     const itemName = (item.title || item.name || '').toLowerCase();
     let targetClub = systemClubs.find(
-      (c) => c.name.toLowerCase() === itemName
+      (c) =>
+        (c.name && c.name.toLowerCase() === itemName) ||
+        (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
+        (c.externalId && item.externalId && String(c.externalId) === String(item.externalId)) ||
+        (item.clubId && c.id === item.clubId) ||
+        (item.id && typeof item.id === 'number' && c.id === item.id)
     );
+
+    // If not found in local systemClubs, fetch fresh clubs from backend
+    if (!targetClub && token) {
+      const freshAllClubs = await fetchAllClubsApi();
+      if (Array.isArray(freshAllClubs) && freshAllClubs.length > 0) {
+        setSystemClubs(freshAllClubs);
+        targetClub = freshAllClubs.find(
+          (c) =>
+            (c.name && c.name.toLowerCase() === itemName) ||
+            (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
+            (c.externalId && item.externalId && String(c.externalId) === String(item.externalId)) ||
+            (item.clubId && c.id === item.clubId) ||
+            (item.id && typeof item.id === 'number' && c.id === item.id)
+        );
+      }
+    }
 
     const currentUserMember = {
       id: user?.id || 1,
@@ -384,18 +412,43 @@ const HomePage = () => {
 
     if (targetClub && typeof targetClub.id === 'number') {
       await joinClubApi(targetClub.id);
-      const freshMembers = await fetchClubMembersApi(targetClub.id);
-      if (Array.isArray(freshMembers) && freshMembers.length > 0) {
-        targetClub = {
-          ...targetClub,
-          members: freshMembers,
-          memberCount: freshMembers.length
-        };
+      const freshClub = await fetchClubApi(targetClub.id);
+      if (freshClub) {
+        targetClub = freshClub;
+      } else {
+        const freshMembers = await fetchClubMembersApi(targetClub.id);
+        if (Array.isArray(freshMembers) && freshMembers.length > 0) {
+          targetClub = {
+            ...targetClub,
+            members: freshMembers,
+            memberCount: freshMembers.length
+          };
+        }
       }
+      setSystemClubs((prev) =>
+        prev.map((c) => (c.id === targetClub.id ? targetClub : c))
+      );
     } else if (!targetClub) {
       const created = await createClubApi(item);
       if (created) {
         targetClub = created;
+      } else {
+        // In case creation failed because club already exists in backend, fetch and join
+        const freshAllClubs = await fetchAllClubsApi();
+        if (Array.isArray(freshAllClubs) && freshAllClubs.length > 0) {
+          setSystemClubs(freshAllClubs);
+          targetClub = freshAllClubs.find(
+            (c) =>
+              (c.name && c.name.toLowerCase() === itemName) ||
+              (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
+              (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
+          );
+          if (targetClub && typeof targetClub.id === 'number') {
+            await joinClubApi(targetClub.id);
+            const freshClub = await fetchClubApi(targetClub.id);
+            if (freshClub) targetClub = freshClub;
+          }
+        }
       }
     }
 
@@ -467,16 +520,25 @@ const HomePage = () => {
       setSelectedChannelId(targetClub.channels[0].id);
     }
     setSearchQuery('');
+
+    fetchMyClubsApi().then((freshClubs) => {
+      if (Array.isArray(freshClubs)) {
+        setClubs(freshClubs);
+      }
+    });
   };
 
   // Trigger creation flow by prompting user with moderator explanation popup
   const handleCreateClub = (item) => {
     const itemName = (item.title || item.name || '').toLowerCase();
     const existing = systemClubs.find(
-      (c) => c.name.toLowerCase() === itemName
+      (c) =>
+        (c.name && c.name.toLowerCase() === itemName) ||
+        (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
+        (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
     );
     if (existing) {
-      handleJoinClub(item);
+      handleJoinClub(existing);
       return;
     }
 
@@ -489,10 +551,13 @@ const HomePage = () => {
 
     const itemName = (item.title || item.name || '').toLowerCase();
     const existing = systemClubs.find(
-      (c) => c.name.toLowerCase() === itemName
+      (c) =>
+        (c.name && c.name.toLowerCase() === itemName) ||
+        (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
+        (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
     );
     if (existing) {
-      await handleJoinClub(item);
+      await handleJoinClub(existing);
       setPendingClubToCreate(null);
       return;
     }
@@ -561,20 +626,32 @@ const HomePage = () => {
   };
 
   // Leave club handler
-  const handleLeaveClub = (clubId) => {
+  const handleLeaveClub = async (clubId) => {
     if (typeof clubId === 'number') {
-      leaveClubApi(clubId);
+      await leaveClubApi(clubId);
     }
     setSystemClubs((prev) =>
-      prev.map((c) => {
-        if (c.id === clubId) {
-          const updatedMembers = (c.members || []).filter(
-            (m) => !(m.id && user?.id ? String(m.id) === String(user.id) : (m.name || '').toLowerCase() === (user?.username || '').toLowerCase())
-          );
-          return { ...c, members: updatedMembers, memberCount: updatedMembers.length };
-        }
-        return c;
-      })
+      prev
+        .map((c) => {
+          if (c.id === clubId) {
+            const updatedMembers = (c.members || []).filter(
+              (m) =>
+                !(m.id && user?.id
+                  ? String(m.id) === String(user.id)
+                  : (m.name || '').toLowerCase() === (user?.username || '').toLowerCase())
+            );
+            return { ...c, members: updatedMembers, memberCount: updatedMembers.length };
+          }
+          return c;
+        })
+        .filter((c) => {
+          // If another user is also in that club, do NOT delete it from systemClubs.
+          // If no other user remains in the club, remove it (it was deleted).
+          if (c.id === clubId) {
+            return c.members && c.members.length > 0;
+          }
+          return true;
+        })
     );
     setClubs((prev) => {
       const remaining = prev.filter((c) => c.id !== clubId);
@@ -587,6 +664,13 @@ const HomePage = () => {
         setSelectedClubId(null);
       }
       return remaining;
+    });
+
+    // Refresh from backend to synchronize club status
+    fetchAllClubsApi().then((freshAllClubs) => {
+      if (Array.isArray(freshAllClubs)) {
+        setSystemClubs(freshAllClubs);
+      }
     });
   };
 
@@ -620,6 +704,7 @@ const HomePage = () => {
         onCreateClub={handleCreateClub}
         joinedClubTitles={clubs.map((c) => c.name)}
         existingClubTitles={systemClubs.map((c) => c.name)}
+        systemClubs={systemClubs}
       />
 
       {/* Main Content Area */}

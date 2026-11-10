@@ -17,7 +17,8 @@ const TopNav = ({
   onCreateClub,
   joinedClubTitles = [],
   existingClubTitles = [],
-  joinedClubNames
+  joinedClubNames,
+  systemClubs = []
 }) => {
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const navRightRef = useRef(null);
@@ -57,6 +58,7 @@ const TopNav = ({
           joinedClubTitles={joinedClubTitles}
           existingClubTitles={existingClubTitles}
           joinedClubNames={joinedClubNames}
+          systemClubs={systemClubs}
         />
       </div>
 

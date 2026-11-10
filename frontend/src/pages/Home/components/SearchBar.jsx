@@ -13,7 +13,8 @@ const SearchBar = ({
   onCreateClub,
   joinedClubTitles = [],
   existingClubTitles = [],
-  joinedClubNames
+  joinedClubNames,
+  systemClubs = []
 }) => {
   const effectiveJoined = joinedClubTitles.length > 0 ? joinedClubTitles : (joinedClubNames || []);
   const [internalQuery, setInternalQuery] = useState('');
@@ -159,6 +160,7 @@ const SearchBar = ({
           onCreateClub={onCreateClub}
           joinedClubTitles={effectiveJoined}
           existingClubTitles={existingClubTitles}
+          systemClubs={systemClubs}
           isLoading={isLoading}
           isLiveApi={isLiveApi}
         />
