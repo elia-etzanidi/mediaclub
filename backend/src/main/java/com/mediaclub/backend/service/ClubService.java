@@ -45,12 +45,17 @@ public class ClubService {
         User creator = userRepository.findById(creatorUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        String coverImageUrl = request.getCoverImageUrl();
+        if (coverImageUrl == null || coverImageUrl.trim().isEmpty()) {
+            coverImageUrl = generateClubAvatar(request.getName(), request.getMediaType());
+        }
+
         Club club = Club.builder()
                 .name(request.getName())
                 .mediaType(request.getMediaType())
                 .externalSource(request.getExternalSource())
                 .externalId(request.getExternalId())
-                .coverImageUrl(request.getCoverImageUrl())
+                .coverImageUrl(coverImageUrl)
                 .description(request.getDescription())
                 .releaseDate(request.getReleaseDate())
                 .createdBy(creator)
@@ -295,5 +300,42 @@ public class ClubService {
         if (membership.getRole() != MembershipRole.MODERATOR) {
             throw new ForbiddenException("You must be a moderator of this club to do that");
         }
+    }
+
+    public static String generateClubAvatar(String clubName, MediaType mediaType) {
+        String letter = "C";
+        if (clubName != null && !clubName.trim().isEmpty()) {
+            String trimmed = clubName.trim();
+            for (int i = 0; i < trimmed.length(); i++) {
+                char c = trimmed.charAt(i);
+                if (Character.isLetterOrDigit(c)) {
+                    letter = String.valueOf(Character.toUpperCase(c));
+                    break;
+                }
+            }
+        }
+        String startColor = "%23005a56";
+        String endColor = "%23003836";
+        if (mediaType == MediaType.BOOK) {
+            startColor = "%23f59e0b";
+            endColor = "%23b45309";
+        } else if (mediaType == MediaType.SHOW) {
+            startColor = "%233f8f8f";
+            endColor = "%23276060";
+        } else if (mediaType == MediaType.GAME) {
+            startColor = "%23818cf8";
+            endColor = "%234f46e5";
+        }
+
+        return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E"
+                + "%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E"
+                + "%3Cstop offset='0%25' stop-color='" + startColor + "'/%3E"
+                + "%3Cstop offset='100%25' stop-color='" + endColor + "'/%3E"
+                + "%3C/linearGradient%3E%3C/defs%3E"
+                + "%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E"
+                + "%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' "
+                + "font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3E"
+                + letter
+                + "%3C/text%3E%3C/svg%3E";
     }
 }

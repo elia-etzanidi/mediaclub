@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { generateClubProfilePicture } from '../../../services/clubService';
 import './CreateClubModal.css';
 
 const CreateClubModal = ({ item, onConfirm, onClose }) => {
@@ -49,14 +50,17 @@ const CreateClubModal = ({ item, onConfirm, onClose }) => {
           {/* Target Media Preview */}
           <div className="create-club-media-preview">
             <img
-              src={item.photo}
-              alt={item.title}
+              src={
+                item.photo ||
+                item.coverImageUrl ||
+                item.img ||
+                generateClubProfilePicture(item.title || item.name, item.type || item.mediaType)
+              }
+              alt={item.title || item.name}
               className="create-club-media-photo"
               onError={(e) => {
                 e.target.onerror = null;
-                const initial = item.title ? item.title.slice(0, 3).toUpperCase() : 'MED';
-                const bgColor = item.type === 'books' ? '%23d97706' : item.type === 'tv' ? '%23357979' : '%23004643';
-                e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='${bgColor}'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='12' text-anchor='middle'%3E${encodeURIComponent(initial)}%3C/text%3E%3C/svg%3E`;
+                e.target.src = generateClubProfilePicture(item.title || item.name, item.type || item.mediaType);
               }}
             />
             <div className="create-club-media-info">

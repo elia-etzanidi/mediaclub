@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { getLatestDmSnippet, sortChatsByRecency } from '../../../services/directMessageService';
+import { generateClubProfilePicture } from '../../../services/clubService';
 import defaultAvatar from '../../../assets/default-avatar.png';
 
 const LeftPane = ({
@@ -98,12 +99,19 @@ const LeftPane = ({
               >
                 <div className="cell-image-wrapper">
                   <img
-                    src={item.img || defaultAvatar}
+                    src={
+                      item.img ||
+                      (activeTab === 'clubs'
+                        ? generateClubProfilePicture(item.name, item.mediaType)
+                        : defaultAvatar)
+                    }
                     alt={item.name}
                     className="cell-image"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = defaultAvatar;
+                      e.target.src = activeTab === 'clubs'
+                        ? generateClubProfilePicture(item.name, item.mediaType)
+                        : defaultAvatar;
                     }}
                   />
                   {activeTab === 'people' && (

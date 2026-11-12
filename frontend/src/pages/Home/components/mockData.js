@@ -12,7 +12,7 @@ export const initialClubs = [
     id: 1, 
     name: 'Inception', 
     mediaType: 'movies',
-    img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23004643'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EINC%3C/text%3E%3C/svg%3E", 
+    img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23005a56'/%3E%3Cstop offset='100%25' stop-color='%23003836'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EI%3C/text%3E%3C/svg%3E", 
     channels: [
       { id: 'info', name: 'info', type: 'info' },
       { id: 1, name: 'general', type: 'text' },
@@ -26,7 +26,7 @@ export const initialClubs = [
     id: 2, 
     name: 'Breaking Bad', 
     mediaType: 'tv',
-    img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23357979'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EBB%3C/text%3E%3C/svg%3E", 
+    img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233f8f8f'/%3E%3Cstop offset='100%25' stop-color='%23276060'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EB%3C/text%3E%3C/svg%3E", 
     channels: [
       { id: 'info', name: 'info', type: 'info' },
       { id: 1, name: 'general', type: 'text' },
@@ -46,7 +46,7 @@ export const mockSearchResults = [
     title: 'Inception',
     genre: 'Sci-Fi / Action',
     year: '2010',
-    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23004643'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EINC%3C/text%3E%3C/svg%3E"
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23005a56'/%3E%3Cstop offset='100%25' stop-color='%23003836'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EI%3C/text%3E%3C/svg%3E"
   },
   {
     id: 2,
@@ -54,7 +54,7 @@ export const mockSearchResults = [
     title: 'Breaking Bad',
     genre: 'Crime / Drama',
     year: '2008',
-    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23357979'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EBB%3C/text%3E%3C/svg%3E"
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233f8f8f'/%3E%3Cstop offset='100%25' stop-color='%23276060'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EB%3C/text%3E%3C/svg%3E"
   },
   {
     id: 3,
@@ -62,7 +62,7 @@ export const mockSearchResults = [
     title: 'Dune',
     genre: 'Sci-Fi',
     year: '1965',
-    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23d97706'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3ED%3C/text%3E%3C/svg%3E"
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23f59e0b'/%3E%3Cstop offset='100%25' stop-color='%23b45309'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3ED%3C/text%3E%3C/svg%3E"
   },
   {
     id: 4,
@@ -70,7 +70,7 @@ export const mockSearchResults = [
     title: 'Interstellar',
     genre: 'Sci-Fi / Adventure',
     year: '2014',
-    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23112625'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EINT%3C/text%3E%3C/svg%3E"
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23005a56'/%3E%3Cstop offset='100%25' stop-color='%23003836'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EI%3C/text%3E%3C/svg%3E"
   },
   {
     id: 5,
@@ -78,7 +78,7 @@ export const mockSearchResults = [
     title: 'Stranger Things',
     genre: 'Sci-Fi / Drama',
     year: '2016',
-    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%23991b1b'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3EST%3C/text%3E%3C/svg%3E"
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233f8f8f'/%3E%3Cstop offset='100%25' stop-color='%23276060'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3ES%3C/text%3E%3C/svg%3E"
   },
   {
     id: 6,
@@ -86,7 +86,23 @@ export const mockSearchResults = [
     title: 'The Hobbit',
     genre: 'High Fantasy',
     year: '1937',
-    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 56'%3E%3Crect width='40' height='56' rx='4' fill='%2315803d'/%3E%3Ctext x='20' y='32' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='14' text-anchor='middle'%3ETH%3C/text%3E%3C/svg%3E"
+    photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23f59e0b'/%3E%3Cstop offset='100%25' stop-color='%23b45309'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3ET%3C/text%3E%3C/svg%3E"
+  },
+  {
+    id: 7,
+    type: 'movies',
+    title: 'Solaris',
+    genre: 'Sci-Fi / Drama',
+    year: '1972',
+    photo: null
+  },
+  {
+    id: 8,
+    type: 'books',
+    title: 'Neuromancer',
+    genre: 'Cyberpunk',
+    year: '1984',
+    photo: null
   }
 ];
 

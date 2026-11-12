@@ -22,7 +22,8 @@ import {
   joinClubApi,
   createClubApi,
   leaveClubApi,
-  fetchClubMembersApi
+  fetchClubMembersApi,
+  generateClubProfilePicture
 } from '../../services/clubService';
 import {
   fetchConversationsApi,
@@ -793,19 +794,37 @@ const HomePage = () => {
       role: 'moderator'
     };
 
-    const createdClub = await createClubApi(item);
+    const clubName = item.title || item.name || 'Club';
+    const rawCover = item.photo || item.coverImageUrl || item.img || item.coverLarge;
+    const hasCover = Boolean(rawCover && rawCover.trim() && rawCover !== '/default-club.png');
+    const profilePicture = hasCover
+      ? rawCover.trim()
+      : generateClubProfilePicture(clubName, item.type || item.mediaType);
+
+    const clubPayload = {
+      ...item,
+      name: clubName,
+      coverImageUrl: profilePicture,
+      photo: profilePicture,
+      img: profilePicture
+    };
+
+    const createdClub = await createClubApi(clubPayload);
     const newClub = createdClub ? {
       ...createdClub,
+      img: createdClub.img || profilePicture,
+      coverImageUrl: createdClub.coverImageUrl || profilePicture,
       members: (createdClub.members && createdClub.members.length > 0)
         ? createdClub.members
         : [currentUserMod]
     } : {
       id: Date.now(),
-      name: item.title || item.name,
+      name: clubName,
       mediaType: item.type || item.mediaType || 'movies',
       externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
       externalId: item.externalId || String(item.id),
-      img: item.photo || item.coverLarge || item.img,
+      img: profilePicture,
+      coverImageUrl: profilePicture,
       backdrop: item.backdrop || null,
       year: item.year,
       genre: item.genre,

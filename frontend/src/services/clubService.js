@@ -1,6 +1,34 @@
 // Club API service with backend integration & local fallback
 import defaultAvatar from '../assets/default-avatar.png';
 
+export const getClubFirstLetter = (name) => {
+  if (!name || typeof name !== 'string') return 'C';
+  const trimmed = name.trim();
+  const match = trimmed.match(/[a-zA-Z0-9]/);
+  return match ? match[0].toUpperCase() : (trimmed.charAt(0).toUpperCase() || 'C');
+};
+
+export const generateClubProfilePicture = (name, mediaType = 'movies') => {
+  const letter = getClubFirstLetter(name);
+  const typeStr = (mediaType || '').toLowerCase();
+
+  let startColor = '%23005a56';
+  let endColor = '%23003836';
+
+  if (typeStr.includes('book')) {
+    startColor = '%23f59e0b';
+    endColor = '%23b45309';
+  } else if (typeStr.includes('tv') || typeStr.includes('show')) {
+    startColor = '%233f8f8f';
+    endColor = '%23276060';
+  } else if (typeStr.includes('game')) {
+    startColor = '%23818cf8';
+    endColor = '%234f46e5';
+  }
+
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='${startColor}'/%3E%3Cstop offset='100%25' stop-color='${endColor}'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' font-weight='700' font-size='48'%3E${encodeURIComponent(letter)}%3C/text%3E%3C/svg%3E`;
+};
+
 export const normalizeClub = (club) => {
   if (!club) return null;
 
@@ -21,14 +49,19 @@ export const normalizeClub = (club) => {
   else if (mediaTypeStr === 'show') mediaType = 'tv';
   else if (mediaTypeStr === 'game') mediaType = 'games';
 
+  const clubName = club.name || 'Club';
+  const rawCover = club.coverImageUrl || club.img || club.photo || club.coverLarge;
+  const hasCover = Boolean(rawCover && rawCover !== '/default-club.png' && rawCover.trim());
+  const coverUrl = hasCover ? rawCover.trim() : generateClubProfilePicture(clubName, mediaType);
+
   return {
     id: club.id,
-    name: club.name,
+    name: clubName,
     mediaType,
     externalSource: club.externalSource,
     externalId: club.externalId,
-    img: club.coverImageUrl || club.img || club.photo || club.coverLarge || '/default-club.png',
-    coverImageUrl: club.coverImageUrl || club.img,
+    img: coverUrl,
+    coverImageUrl: coverUrl,
     backdrop: club.backdrop || null,
     description: club.description || '',
     year: club.releaseDate || club.year || '',
@@ -188,6 +221,13 @@ export const createClubApi = async (clubData) => {
     sourceEnum = clubData.externalSource.toUpperCase();
   }
 
+  const clubName = clubData.name || clubData.title || 'Club';
+  const rawCover = clubData.coverImageUrl || clubData.photo || clubData.img || clubData.coverLarge || '';
+  const hasCover = Boolean(rawCover && rawCover.trim() && rawCover !== '/default-club.png');
+  const coverImageUrl = hasCover
+    ? rawCover.trim()
+    : generateClubProfilePicture(clubName, clubData.mediaType || clubData.type);
+
   try {
     const res = await fetch('/api/clubs', {
       method: 'POST',
@@ -196,11 +236,11 @@ export const createClubApi = async (clubData) => {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        name: clubData.name || clubData.title,
+        name: clubName,
         mediaType: mediaTypeEnum,
         externalSource: sourceEnum,
         externalId: String(clubData.externalId || clubData.id || Date.now()),
-        coverImageUrl: clubData.coverImageUrl || clubData.photo || clubData.img || clubData.coverLarge || '',
+        coverImageUrl,
         description: clubData.description || clubData.plot || '',
         releaseDate: String(clubData.year || clubData.releaseDate || '')
       })

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './ClubInfoView.css';
 import { getClubMediaDetails } from './mockData';
 import { getMediaDetailsForClub } from '../../../services/mediaService';
+import { generateClubProfilePicture } from '../../../services/clubService';
 
 const ClubInfoView = ({ club, activeChannel, onSelectChannel }) => {
   const [media, setMedia] = useState(() => club?.mediaDetails || getClubMediaDetails(club));
@@ -88,14 +89,17 @@ const ClubInfoView = ({ club, activeChannel, onSelectChannel }) => {
             {/* Poster Card */}
             <div className="info-poster-wrapper">
               <img
-                src={media.img || club.img}
-                alt={media.title}
+                src={
+                  media.img ||
+                  club.img ||
+                  club.coverImageUrl ||
+                  generateClubProfilePicture(club.name || media.title, isBook ? 'books' : isTv ? 'tv' : 'movies')
+                }
+                alt={media.title || club.name}
                 className="info-poster-image"
                 onError={(e) => {
                   e.target.onerror = null;
-                  const initial = media.title ? media.title.slice(0, 4).toUpperCase() : 'MED';
-                  const bg = isBook ? '%23d97706' : isTv ? '%23357979' : '%23004643';
-                  e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 130 180'%3E%3Crect width='130' height='180' rx='10' fill='${bg}'/%3E%3Ctext x='65' y='95' fill='%23fafafa' font-family='sans-serif' font-weight='bold' font-size='18' text-anchor='middle'%3E${encodeURIComponent(initial)}%3C/text%3E%3C/svg%3E`;
+                  e.target.src = generateClubProfilePicture(media.title || club.name, isBook ? 'books' : isTv ? 'tv' : 'movies');
                 }}
               />
               <span className="info-poster-type-badge">

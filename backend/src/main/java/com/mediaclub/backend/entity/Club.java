@@ -40,6 +40,7 @@ public class Club {
     @Column(name = "external_id", nullable = false)
     private String externalId;
 
+    @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
 
     @Column(length = 2000)
