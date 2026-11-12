@@ -4,6 +4,156 @@ import './StartDirectMessageModal.css';
 import defaultAvatar from '../../../assets/default-avatar.png';
 import { fetchClubMembersApi } from '../../../services/clubService';
 
+// Helper to accurately measure text width using a 2D canvas context
+let measureCanvas = null;
+let measureCtx = null;
+
+const getTextWidth = (text, font) => {
+  if (!text) return 0;
+  try {
+    if (typeof document !== 'undefined') {
+      if (!measureCanvas) {
+        measureCanvas = document.createElement('canvas');
+        measureCtx = measureCanvas.getContext('2d');
+      }
+      if (measureCtx) {
+        if (font) measureCtx.font = font;
+        return measureCtx.measureText(text).width;
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return text.length * 7;
+};
+
+// Component to display shared clubs with responsive "+N more" text when cut off
+const SharedClubs = ({ clubs = [], searchTerm = '' }) => {
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth);
+      }
+    };
+
+    updateWidth();
+
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.contentRect) {
+            setContainerWidth(entry.contentRect.width);
+          }
+        }
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, []);
+
+  // Prioritize clubs matching current search term so they remain visible
+  const sortedClubs = useMemo(() => {
+    if (!clubs || clubs.length <= 1) return clubs || [];
+    if (!searchTerm || !searchTerm.trim()) return clubs;
+    const q = searchTerm.trim().toLowerCase();
+    return [...clubs].sort((a, b) => {
+      const aMatches = a.toLowerCase().includes(q);
+      const bMatches = b.toLowerCase().includes(q);
+      if (aMatches && !bMatches) return -1;
+      if (!aMatches && bMatches) return 1;
+      return 0;
+    });
+  }, [clubs, searchTerm]);
+
+  // Dynamically calculate how many clubs fit in container width before cutting off
+  const { visibleClubs, hiddenCount } = useMemo(() => {
+    if (!sortedClubs || sortedClubs.length === 0) {
+      return { visibleClubs: [], hiddenCount: 0 };
+    }
+    if (sortedClubs.length === 1) {
+      return { visibleClubs: sortedClubs, hiddenCount: 0 };
+    }
+
+    const effectiveWidth = containerWidth > 0 ? containerWidth : 280;
+    const prefix = 'Shared: ';
+
+    let font = '400 12.5px Nunito, sans-serif';
+    if (containerRef.current && typeof window !== 'undefined') {
+      const computed = window.getComputedStyle(containerRef.current);
+      if (computed.font) {
+        font = computed.font;
+      } else {
+        font = `${computed.fontWeight || '400'} ${computed.fontSize || '12.5px'} ${computed.fontFamily || 'Nunito, sans-serif'}`;
+      }
+    }
+
+    const prefixWidth = getTextWidth(prefix, font);
+    const buffer = 4;
+    const maxAvailable = Math.max(effectiveWidth - buffer, 60);
+
+    // Check if ALL clubs fit without cutting off
+    const allClubsText = sortedClubs.join(', ');
+    const allWidth = prefixWidth + getTextWidth(allClubsText, font);
+    if (allWidth <= maxAvailable) {
+      return { visibleClubs: sortedClubs, hiddenCount: 0 };
+    }
+
+    // Find maximum number of clubs k (>= 1) that fit with "+N more" text
+    for (let k = sortedClubs.length - 1; k >= 1; k--) {
+      const remainingCount = sortedClubs.length - k;
+      const moreText = ` +${remainingCount} more`;
+      const moreWidth = getTextWidth(moreText, font);
+      const candidateText = sortedClubs.slice(0, k).join(', ');
+      const totalWidth = prefixWidth + getTextWidth(candidateText, font) + moreWidth;
+
+      if (totalWidth <= maxAvailable) {
+        return { visibleClubs: sortedClubs.slice(0, k), hiddenCount: remainingCount };
+      }
+    }
+
+    return { visibleClubs: [sortedClubs[0]], hiddenCount: sortedClubs.length - 1 };
+  }, [sortedClubs, containerWidth]);
+
+  if (!clubs || clubs.length === 0) {
+    return (
+      <div ref={containerRef} className="start-dm-clubs">
+        <span className="start-dm-clubs-empty">Club Member</span>
+      </div>
+    );
+  }
+
+  const hiddenClubs = sortedClubs.slice(visibleClubs.length);
+  const fullTooltip = `Shared clubs (${sortedClubs.length}):\n${sortedClubs.join(', ')}`;
+  const moreTooltip = `+${hiddenCount} more shared clubs:\n${hiddenClubs.join(', ')}`;
+
+  return (
+    <div
+      ref={containerRef}
+      className="start-dm-clubs"
+      title={fullTooltip}
+    >
+      <span className="start-dm-clubs-prefix">Shared:</span>{' '}
+      <span className="start-dm-clubs-names">
+        {visibleClubs.join(', ')}
+      </span>
+      {hiddenCount > 0 && (
+        <span className="start-dm-clubs-more" title={moreTooltip}>
+          {` +${hiddenCount} more`}
+        </span>
+      )}
+    </div>
+  );
+};
+
 const StartDirectMessageModal = ({
   isOpen,
   onClose,
@@ -105,7 +255,7 @@ const StartDirectMessageModal = ({
         }
 
         const mapKey = memberId != null ? `id_${memberId}` : `name_${lowerName}`;
-        const clubName = club.name || 'Club';
+        const clubName = club.name || club.title || club.mediaDetails?.title || 'Club';
 
         if (memberMap.has(mapKey)) {
           const existing = memberMap.get(mapKey);
@@ -274,7 +424,12 @@ const StartDirectMessageModal = ({
 
         {/* Members List */}
         <div className="start-dm-list" role="listbox">
-          {filteredMembers.length > 0 ? (
+          {isLoading && availableMembers.length === 0 ? (
+            <div className="start-dm-loading">
+              <div className="start-dm-spinner" aria-hidden="true" />
+              <p className="start-dm-loading-text">Finding members in your clubs...</p>
+            </div>
+          ) : filteredMembers.length > 0 ? (
             filteredMembers.map((member) => (
               <div
                 key={member.id || member.name}
@@ -314,11 +469,7 @@ const StartDirectMessageModal = ({
                       </span>
                     )}
                   </div>
-                  <span className="start-dm-clubs">
-                    {member.clubs.length > 0
-                      ? `In ${member.clubs.join(', ')}`
-                      : 'Club Member'}
-                  </span>
+                  <SharedClubs clubs={member.clubs} searchTerm={searchTerm} />
                 </div>
                 <button
                   type="button"

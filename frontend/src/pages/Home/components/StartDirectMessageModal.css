@@ -168,7 +168,7 @@
 
 .start-dm-cell {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 10px 12px;
   border-radius: 10px;
   cursor: pointer;
@@ -187,6 +187,7 @@
   width: 40px;
   height: 40px;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .start-dm-avatar {
@@ -248,13 +249,44 @@
 }
 
 .start-dm-clubs {
-  display: block;
+  display: flex;
+  align-items: center;
   font-size: 0.78rem;
   color: var(--text-muted);
+  margin-top: 3px;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.35;
+}
+
+.start-dm-clubs-prefix {
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.start-dm-clubs-names {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  min-width: 0;
+  flex-shrink: 1;
+  color: var(--text-muted);
+}
+
+.start-dm-clubs-more {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.start-dm-clubs-empty {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .start-dm-action-btn {
@@ -269,6 +301,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  align-self: center;
 }
 
 .start-dm-action-btn:hover {
@@ -329,3 +362,35 @@
   background-color: rgba(0, 70, 67, 0.16);
   color: var(--primary-dark);
 }
+
+.start-dm-loading {
+  padding: 36px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.start-dm-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(0, 70, 67, 0.15);
+  border-top-color: var(--primary-dark);
+  border-radius: 50%;
+  animation: startDmSpin 0.8s linear infinite;
+}
+
+@keyframes startDmSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.start-dm-loading-text {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
