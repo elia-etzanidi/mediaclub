@@ -13,6 +13,7 @@ class WebSocketService {
     this.channelSubscriptions = new Map(); // channelId -> Set of callback objects { onMessage, onReaction, onDelete, onTyping }
     this.clubPresenceSubscriptions = new Map(); // clubId -> Set of callbacks (presenceEvent) => void
     this.dmListeners = new Set(); // Set of callbacks (dmData) => void
+    this.dmConversationSubscriptions = new Map(); // convId -> Set of callback objects { onMessage, onTyping }
     this.stompSubscriptions = new Map(); // key -> stompSubscription
     this.pendingConnect = null;
   }
@@ -92,6 +93,7 @@ class WebSocketService {
       this.channelSubscriptions.clear();
       this.clubPresenceSubscriptions.clear();
       this.dmListeners.clear();
+      this.dmConversationSubscriptions.clear();
       this.stompSubscriptions.clear();
       this.pendingConnect = null;
     }
@@ -241,6 +243,9 @@ class WebSocketService {
     if (this.dmListeners.size > 0) {
       this.setupDmSubscription();
       this.setupNotificationSubscription();
+    }
+    for (const convId of this.dmConversationSubscriptions.keys()) {
+      this.setupDmConversationSubscriptions(convId);
     }
   }
 
@@ -437,6 +442,109 @@ class WebSocketService {
       } catch (e) {
         console.warn('Failed to subscribe to /user/queue/notifications:', e);
       }
+    }
+  }
+
+  // Subscribe to a specific DM conversation (real-time messages and typing indicators)
+  subscribeToDmConversation(conversationId, callbacks = {}) {
+    if (!conversationId) return () => {};
+
+    const convId = Number(conversationId);
+    if (!this.dmConversationSubscriptions.has(convId)) {
+      this.dmConversationSubscriptions.set(convId, new Set());
+    }
+    const listenerSet = this.dmConversationSubscriptions.get(convId);
+    listenerSet.add(callbacks);
+
+    if (this.connected && this.client) {
+      this.setupDmConversationSubscriptions(convId);
+    } else {
+      this.connect();
+    }
+
+    return () => {
+      const set = this.dmConversationSubscriptions.get(convId);
+      if (set) {
+        set.delete(callbacks);
+        if (set.size === 0) {
+          this.dmConversationSubscriptions.delete(convId);
+          this.teardownDmConversationSubscriptions(convId);
+        }
+      }
+    };
+  }
+
+  setupDmConversationSubscriptions(convId) {
+    if (!this.client || !this.connected) return;
+
+    // Direct message topic for this conversation
+    const dmMsgKey = `dm_msg_${convId}`;
+    if (!this.stompSubscriptions.has(dmMsgKey)) {
+      try {
+        const sub = this.client.subscribe(`/user/queue/dm/${convId}`, (frame) => {
+          try {
+            const data = JSON.parse(frame.body);
+            const listeners = this.dmConversationSubscriptions.get(convId);
+            if (listeners) {
+              listeners.forEach((cb) => cb.onMessage?.(data));
+            }
+          } catch (e) {
+            console.error('Error parsing DM message frame:', e);
+          }
+        });
+        this.stompSubscriptions.set(dmMsgKey, sub);
+      } catch (e) {
+        console.warn('Failed to subscribe to DM message topic:', e);
+      }
+    }
+
+    // Direct message typing topic for this conversation
+    const dmTypingKey = `dm_typing_${convId}`;
+    if (!this.stompSubscriptions.has(dmTypingKey)) {
+      try {
+        const sub = this.client.subscribe(`/user/queue/dm/${convId}/typing`, (frame) => {
+          try {
+            const data = JSON.parse(frame.body);
+            const listeners = this.dmConversationSubscriptions.get(convId);
+            if (listeners) {
+              listeners.forEach((cb) => cb.onTyping?.(data));
+            }
+          } catch (e) {
+            console.error('Error parsing DM typing frame:', e);
+          }
+        });
+        this.stompSubscriptions.set(dmTypingKey, sub);
+      } catch (e) {
+        console.warn('Failed to subscribe to DM typing topic:', e);
+      }
+    }
+  }
+
+  teardownDmConversationSubscriptions(convId) {
+    const keys = [`dm_msg_${convId}`, `dm_typing_${convId}`];
+    keys.forEach((key) => {
+      const sub = this.stompSubscriptions.get(key);
+      if (sub) {
+        try {
+          sub.unsubscribe();
+        } catch {
+          // Ignore unsubscribe error
+        }
+        this.stompSubscriptions.delete(key);
+      }
+    });
+  }
+
+  // Send DM typing indicator
+  sendDmTyping(conversationId, isTyping) {
+    if (!this.connected || !this.client || !conversationId) return;
+    try {
+      this.client.publish({
+        destination: `/app/dm/${conversationId}/typing`,
+        body: JSON.stringify({ typing: isTyping })
+      });
+    } catch {
+      // Ignore typing send error
     }
   }
 }

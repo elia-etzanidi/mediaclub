@@ -32,6 +32,9 @@ public class DmChatController {
     public void sendMessage(@DestinationVariable Long conversationId,
                              @Payload SendMessageRequest request,
                              Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+            return;
+        }
         UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
 
         directMessageService.sendMessage(conversationId, user.getId(), request.getContent());
@@ -41,6 +44,9 @@ public class DmChatController {
     public void typing(@DestinationVariable Long conversationId,
                         @Payload TypingIndicatorRequest request,
                         Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+            return;
+        }
         UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
 
         TypingEvent event = new TypingEvent(conversationId, user.getId(), user.getUsername(), request.isTyping());

@@ -10,4 +10,8 @@ public class TypingEvent {
     private Long userId;
     private String username;
     private boolean typing; // true = started typing, false = stopped
+
+    public Long getConversationId() {
+        return channelId;
+    }
 }

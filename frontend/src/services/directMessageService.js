@@ -168,7 +168,29 @@ export const fetchDirectMessages = async (person, currentUser) => {
 
   const token = localStorage.getItem('token');
   const targetId = person.id;
-  const conversationId = person.conversationId;
+  let conversationId = person.conversationId;
+
+  // If conversationId is missing but we have an authenticated session and numeric user ID,
+  // get or start conversation on backend so conversationId and typing work immediately
+  if (token && !conversationId && typeof targetId === 'number') {
+    try {
+      const convRes = await fetch('/api/dms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ recipientUserId: targetId })
+      });
+      if (convRes.ok) {
+        const convData = await convRes.json();
+        conversationId = convData.id;
+        person.conversationId = convData.id;
+      }
+    } catch (e) {
+      console.warn('Backend fetch or start conversation failed:', e);
+    }
+  }
 
   // Attempt backend history if authenticated and conversationId exists
   if (token && conversationId) {
@@ -236,7 +258,13 @@ export const fetchDirectMessages = async (person, currentUser) => {
 /**
  * Send a direct message to a user
  */
-export const sendDirectMessage = async (person, content, currentUser, onSimulatedReply = null) => {
+export const sendDirectMessage = async (
+  person,
+  content,
+  currentUser,
+  onSimulatedReply = null,
+  onSimulatedTyping = null
+) => {
   if (!person || !content?.trim()) return null;
 
   const cleanContent = content.trim();
@@ -313,6 +341,11 @@ export const sendDirectMessage = async (person, content, currentUser, onSimulate
   const responses = DEMO_RESPONSES[targetName];
   if (responses && responses.length > 0 && typeof onSimulatedReply === 'function') {
     setTimeout(() => {
+      onSimulatedTyping?.(true);
+    }, 400);
+
+    setTimeout(() => {
+      onSimulatedTyping?.(false);
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
       const replyMsg = {
         id: `local-dm-reply-${Date.now()}`,
@@ -326,7 +359,7 @@ export const sendDirectMessage = async (person, content, currentUser, onSimulate
       };
       saveDmToLocal(key, replyMsg);
       onSimulatedReply(replyMsg);
-    }, 1200);
+    }, 1800);
   }
 
   return newMsg;

@@ -33,15 +33,24 @@ const DirectMessageView = ({
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
+  const [conversationId, setConversationId] = useState(person?.conversationId || null);
+  const [typingUsers, setTypingUsers] = useState({});
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const formRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const remoteTypingTimeoutRef = useRef(null);
 
   const personName = person?.name || person?.username || 'User';
   const personAvatar = person?.img || person?.avatarUrl || defaultAvatar;
+
+  // Keep conversationId in sync with active person
+  useEffect(() => {
+    setConversationId(person?.conversationId || null);
+  }, [person?.conversationId, person?.id]);
 
   // Find shared clubs with this person
   const sharedClubs = useMemo(() => {
@@ -63,6 +72,9 @@ const DirectMessageView = ({
       const data = await fetchDirectMessages(person, currentUser);
       if (isMounted) {
         setMessages(data);
+        if (person.conversationId) {
+          setConversationId(person.conversationId);
+        }
       }
     };
 
@@ -73,14 +85,74 @@ const DirectMessageView = ({
     };
   }, [person, currentUser]);
 
-  // Subscribe to real-time incoming messages for this conversation
+  // Subscribe to real-time incoming messages & typing for this conversation
   useEffect(() => {
     if (!person) return;
 
-    const unsubscribe = websocketService.subscribeToDirectMessages((dm) => {
+    // Reset typing users when switching chats
+    setTypingUsers({});
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (remoteTypingTimeoutRef.current) clearTimeout(remoteTypingTimeoutRef.current);
+
+    const activeConvId = conversationId || person.conversationId;
+
+    let unsubscribeConv = () => {};
+    if (activeConvId) {
+      unsubscribeConv = websocketService.subscribeToDmConversation(activeConvId, {
+        onMessage: (dm) => {
+          if (!dm) return;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === dm.id)) return prev;
+            const formatted = {
+              id: dm.id,
+              conversationId: dm.conversationId,
+              senderId: dm.senderId,
+              senderUsername: dm.senderUsername,
+              senderAvatarUrl: dm.senderAvatarUrl || personAvatar,
+              content: dm.content,
+              sentAt: dm.sentAt || new Date().toISOString(),
+              reactions: []
+            };
+            return [...prev, formatted];
+          });
+        },
+        onTyping: (typingData) => {
+          if (!typingData || !typingData.username) return;
+          if (currentUser?.id && String(typingData.userId) === String(currentUser.id)) return;
+          if (currentUser?.username && typingData.username.toLowerCase() === currentUser.username.toLowerCase()) return;
+
+          const typerKey = typingData.userId || typingData.username;
+          if (typingData.typing) {
+            setTypingUsers((prev) => ({
+              ...prev,
+              [typerKey]: typingData.username
+            }));
+
+            if (remoteTypingTimeoutRef.current) clearTimeout(remoteTypingTimeoutRef.current);
+            remoteTypingTimeoutRef.current = setTimeout(() => {
+              setTypingUsers((prev) => {
+                const next = { ...prev };
+                delete next[typerKey];
+                return next;
+              });
+            }, 3500);
+          } else {
+            setTypingUsers((prev) => {
+              const next = { ...prev };
+              delete next[typerKey];
+              return next;
+            });
+            if (remoteTypingTimeoutRef.current) clearTimeout(remoteTypingTimeoutRef.current);
+          }
+        }
+      });
+    }
+
+    // Also listen on general user DM queue for incoming DMs
+    const unsubscribeGeneral = websocketService.subscribeToDirectMessages((dm) => {
       if (!dm) return;
       const isForThisConv =
-        (person.conversationId && dm.conversationId && String(person.conversationId) === String(dm.conversationId)) ||
+        (activeConvId && dm.conversationId && String(activeConvId) === String(dm.conversationId)) ||
         (dm.senderId && person.id && String(dm.senderId) === String(person.id)) ||
         (dm.senderUsername && (person.name || person.username) &&
           dm.senderUsername.toLowerCase() === (person.name || person.username).toLowerCase());
@@ -106,9 +178,15 @@ const DirectMessageView = ({
     });
 
     return () => {
-      unsubscribe();
+      unsubscribeConv();
+      unsubscribeGeneral();
+      if (activeConvId) {
+        websocketService.sendDmTyping(activeConvId, false);
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (remoteTypingTimeoutRef.current) clearTimeout(remoteTypingTimeoutRef.current);
     };
-  }, [person, personAvatar]);
+  }, [person, conversationId, currentUser, personAvatar]);
 
   // Auto-scroll to bottom when messages load or change (if not scrolled far up)
   useEffect(() => {
@@ -157,14 +235,42 @@ const DirectMessageView = ({
       textareaRef.current.style.height = 'auto';
     }
 
+    const activeConvId = conversationId || person.conversationId;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (activeConvId) {
+      websocketService.sendDmTyping(activeConvId, false);
+    }
+
     // Callback for simulated demo replies
     const onSimulatedReply = (reply) => {
       setMessages((prev) => [...prev, reply]);
       onMessageSent?.(person, reply);
     };
 
-    const newMsg = await sendDirectMessage(person, text, currentUser, onSimulatedReply);
+    const onSimulatedTyping = (isTyping) => {
+      const typerKey = person.id || personName;
+      setTypingUsers((prev) => {
+        if (isTyping) {
+          return { ...prev, [typerKey]: personName };
+        } else {
+          const next = { ...prev };
+          delete next[typerKey];
+          return next;
+        }
+      });
+    };
+
+    const newMsg = await sendDirectMessage(
+      person,
+      text,
+      currentUser,
+      onSimulatedReply,
+      onSimulatedTyping
+    );
     if (newMsg) {
+      if (person.conversationId) {
+        setConversationId(person.conversationId);
+      }
       setMessages((prev) => [...prev, newMsg]);
       onMessageSent?.(person, newMsg);
       setIsScrolledUp(false);
@@ -193,12 +299,21 @@ const DirectMessageView = ({
     }
   };
 
-  // Auto-resize input
+  // Auto-resize input & broadcast typing indicator
   const handleInputChange = (e) => {
     setInputText(e.target.value);
     const target = e.target;
     target.style.height = 'auto';
     target.style.height = `${Math.min(target.scrollHeight, 140)}px`;
+
+    const activeConvId = conversationId || person?.conversationId;
+    if (activeConvId) {
+      websocketService.sendDmTyping(activeConvId, true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        websocketService.sendDmTyping(activeConvId, false);
+      }, 2500);
+    }
   };
 
   const insertEmoji = (emoji) => {
@@ -573,6 +688,20 @@ const DirectMessageView = ({
 
       {/* Message Input Bar */}
       <footer className="dm-input-container">
+        {Object.keys(typingUsers).length > 0 && (
+          <div className="dm-typing-indicator" aria-live="polite">
+            <span className="typing-dots">
+              <span className="dot"></span>
+              <span className="dot"></span>
+              <span className="dot"></span>
+            </span>
+            <span className="dm-typing-text">
+              <strong>{Object.values(typingUsers).join(', ')}</strong>{' '}
+              {Object.keys(typingUsers).length === 1 ? 'is' : 'are'} typing...
+            </span>
+          </div>
+        )}
+
         <form ref={formRef} className="dm-input-form" onSubmit={handleFormSubmit}>
           {/* Emoji Trigger */}
           <div className="dm-emoji-wrap">
