@@ -124,7 +124,12 @@ const ClubView = ({
     };
   }, [club?.id, onUpdateClub]);
 
-  const activeChannel = club.channels?.find((c) => c.id === selectedChannelId) || club.channels?.[0];
+  const activeChannel =
+    club.channels?.find(
+      (c) =>
+        String(c.id) === String(selectedChannelId) ||
+        (selectedChannelId === 'info' && (c.name === 'info' || c.type === 'info'))
+    ) || club.channels?.[0];
   const isInfoChannel =
     activeChannel?.type === 'info' ||
     activeChannel?.name === 'info' ||

@@ -11,6 +11,8 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
     List<Channel> findByClubId(Long clubId);
 
+    List<Channel> findByClubIdOrderByIdAsc(Long clubId);
+
     Optional<Channel> findByClubIdAndType(Long clubId, ChannelType type);
 
     void deleteByClubId(Long clubId);

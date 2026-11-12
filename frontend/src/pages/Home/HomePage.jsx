@@ -490,16 +490,17 @@ const HomePage = () => {
   };
 
   // Active club: selectedClubId if found in clubs, else first club
-  const activeClub = clubs.find((c) => c.id === selectedClubId) || clubs[0];
+  const activeClub = clubs.find((c) => String(c.id) === String(selectedClubId)) || clubs[0];
 
   // Sync active club's latest members from backend to ensure right panel is always accurate
   useEffect(() => {
-    if (!activeClub?.id || typeof activeClub.id !== 'number') return;
+    const numId = Number(activeClub?.id);
+    if (!activeClub?.id || isNaN(numId)) return;
     let isMounted = true;
-    fetchClubMembersApi(activeClub.id).then((freshMembers) => {
+    fetchClubMembersApi(numId).then((freshMembers) => {
       if (isMounted && Array.isArray(freshMembers) && freshMembers.length > 0) {
         const updateClubMembers = (c) => {
-          if (c.id !== activeClub.id) return c;
+          if (String(c.id) !== String(activeClub.id)) return c;
           const existingMembers = c.members || [];
           const mergedMembers = freshMembers.map((fm) => {
             const existing = existingMembers.find(
@@ -677,169 +678,198 @@ const HomePage = () => {
 
   // Join an existing club found through search
   const handleJoinClub = async (item) => {
-    const itemName = (item.title || item.name || '').toLowerCase();
-    let targetClub = systemClubs.find(
-      (c) =>
-        (c.name && c.name.toLowerCase() === itemName) ||
-        (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
-        (c.externalId && item.externalId && String(c.externalId) === String(item.externalId)) ||
-        (item.clubId && c.id === item.clubId) ||
-        (item.id && typeof item.id === 'number' && c.id === item.id)
-    );
+    if (!item) return;
 
-    // If not found in local systemClubs, fetch fresh clubs from backend
-    if (!targetClub && token) {
-      const freshAllClubs = await fetchAllClubsApi();
-      if (Array.isArray(freshAllClubs) && freshAllClubs.length > 0) {
-        setSystemClubs(freshAllClubs);
-        targetClub = freshAllClubs.find(
-          (c) =>
-            (c.name && c.name.toLowerCase() === itemName) ||
-            (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
-            (c.externalId && item.externalId && String(c.externalId) === String(item.externalId)) ||
-            (item.clubId && c.id === item.clubId) ||
-            (item.id && typeof item.id === 'number' && c.id === item.id)
-        );
-      }
-    }
+    try {
+      const itemName = (item.title || item.name || '').trim().toLowerCase();
+      const itemExtId = item.externalId ? String(item.externalId).trim() : null;
+      const isClubObj = Boolean(item.channels || item.members || item.isClub);
 
-    const currentUserMember = {
-      id: user?.id || 1,
-      name: user?.username || 'Member',
-      username: user?.username || 'Member',
-      img: user?.pfp || user?.avatarUrl || defaultAvatar,
-      role: 'member',
-      status: 'Online',
-      isOnline: true
-    };
+      // Dismiss search immediately for instant UI responsiveness
+      setSearchQuery('');
+      setActiveTab('clubs');
 
-    if (targetClub && typeof targetClub.id === 'number') {
-      await joinClubApi(targetClub.id);
-      const freshClub = await fetchClubApi(targetClub.id);
-      if (freshClub) {
-        targetClub = freshClub;
-      } else {
-        const freshMembers = await fetchClubMembersApi(targetClub.id);
-        if (Array.isArray(freshMembers) && freshMembers.length > 0) {
-          targetClub = {
-            ...targetClub,
-            members: freshMembers,
-            memberCount: freshMembers.length
-          };
-        }
-      }
-      setSystemClubs((prev) =>
-        prev.map((c) => (c.id === targetClub.id ? targetClub : c))
-      );
-    } else if (!targetClub) {
-      const created = await createClubApi(item);
-      if (created) {
-        targetClub = created;
-      } else {
-        // In case creation failed because club already exists in backend, fetch and join
+      // 1. Locate target club in systemClubs
+      let targetClub = (systemClubs || []).find((c) => {
+        if (!c) return false;
+        if (isClubObj && String(c.id) === String(item.id)) return true;
+        const cName = (c.name || '').trim().toLowerCase();
+        if (cName && cName === itemName) return true;
+        if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
+        return false;
+      });
+
+      const currentToken = getToken();
+
+      // If not in local systemClubs, fetch from backend
+      if (!targetClub && currentToken) {
         const freshAllClubs = await fetchAllClubsApi();
         if (Array.isArray(freshAllClubs) && freshAllClubs.length > 0) {
           setSystemClubs(freshAllClubs);
-          targetClub = freshAllClubs.find(
-            (c) =>
-              (c.name && c.name.toLowerCase() === itemName) ||
-              (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
-              (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
-          );
-          if (targetClub && typeof targetClub.id === 'number') {
-            await joinClubApi(targetClub.id);
-            const freshClub = await fetchClubApi(targetClub.id);
-            if (freshClub) targetClub = freshClub;
+          targetClub = freshAllClubs.find((c) => {
+            if (!c) return false;
+            if (isClubObj && String(c.id) === String(item.id)) return true;
+            const cName = (c.name || '').trim().toLowerCase();
+            if (cName && cName === itemName) return true;
+            if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
+            return false;
+          });
+        }
+      }
+
+      const currentUserMember = {
+        id: user?.id || 1,
+        name: user?.username || 'Member',
+        username: user?.username || 'Member',
+        img: user?.pfp || user?.avatarUrl || defaultAvatar,
+        role: 'member',
+        status: 'Online',
+        isOnline: true
+      };
+
+      // 2. If target club has a valid backend ID, call backend join API
+      const targetClubIdNum = Number(targetClub?.id);
+      const hasNumericBackendId = targetClub && !isNaN(targetClubIdNum) && targetClubIdNum > 0 && targetClubIdNum < 1000000000;
+
+      if (hasNumericBackendId && currentToken) {
+        const joinRes = await joinClubApi(targetClubIdNum);
+        if (!joinRes) {
+          // If join failed because club is not yet in backend DB (e.g. mock initial club), create it
+          const created = await createClubApi(targetClub);
+          if (created) {
+            targetClub = created;
+          } else {
+            const freshAll = await fetchAllClubsApi();
+            if (Array.isArray(freshAll)) {
+              setSystemClubs(freshAll);
+              const match = freshAll.find((c) => (c.name || '').trim().toLowerCase() === itemName);
+              if (match) {
+                await joinClubApi(match.id);
+                const freshClub = await fetchClubApi(match.id);
+                targetClub = freshClub || match;
+              }
+            }
+          }
+        } else {
+          const freshClub = await fetchClubApi(targetClubIdNum);
+          if (freshClub) {
+            targetClub = freshClub;
+          }
+        }
+      } else if (!targetClub) {
+        // Club does not exist yet at all - create it
+        if (currentToken) {
+          const created = await createClubApi(item);
+          if (created) {
+            targetClub = created;
+          } else {
+            const freshAll = await fetchAllClubsApi();
+            if (Array.isArray(freshAll)) {
+              setSystemClubs(freshAll);
+              const match = freshAll.find((c) => (c.name || '').trim().toLowerCase() === itemName);
+              if (match) {
+                await joinClubApi(match.id);
+                const freshClub = await fetchClubApi(match.id);
+                targetClub = freshClub || match;
+              }
+            }
           }
         }
       }
-    }
 
-    if (!targetClub) {
-      targetClub = {
-        id: Date.now(),
-        name: item.title || item.name,
-        mediaType: item.type || item.mediaType || 'movies',
-        externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
-        externalId: item.externalId || String(item.id),
-        img: item.photo || item.coverLarge || item.img,
-        backdrop: item.backdrop || null,
-        year: item.year,
-        genre: item.genre,
-        author: item.author,
-        pages: item.pages || null,
-        publisher: item.publisher || null,
-        firstSentence: item.firstSentence || null,
-        audience: item.audience || null,
-        rating: item.rating || null,
-        channels: [
-          { id: 'info', name: 'info', type: 'info' },
-          { id: 1, name: 'general', type: 'text' },
-          { id: 2, name: 'spoilers', type: 'text' },
-          { id: 3, name: 'reviews', type: 'text' },
-          { id: 4, name: 'requests', type: 'text' }
-        ],
-        members: [{ ...currentUserMember, role: 'moderator' }],
-        mediaDetails: item.mediaDetails || null
-      };
-      setSystemClubs((prev) => [...prev, targetClub]);
-    } else {
-      const existingMembers = targetClub.members || [];
-      const alreadyIn = existingMembers.some(
-        (m) =>
-          (m.id && user?.id && String(m.id) === String(user.id)) ||
-          (m.name || m.username || '').toLowerCase() === (user?.username || '').toLowerCase()
-      );
-      if (!alreadyIn) {
-        const updatedMembers = [...existingMembers, currentUserMember];
+      // If still not on backend or offline, generate local club object
+      if (!targetClub) {
+        const clubName = item.title || item.name || 'Club';
+        const rawCover = item.photo || item.coverImageUrl || item.img || item.coverLarge;
+        const profilePicture = generateClubProfilePicture(clubName, item.type || item.mediaType);
         targetClub = {
-          ...targetClub,
-          members: updatedMembers,
-          memberCount: updatedMembers.length
+          id: Date.now(),
+          name: clubName,
+          mediaType: item.type || item.mediaType || 'movies',
+          externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
+          externalId: item.externalId || String(item.id || Date.now()),
+          img: rawCover || profilePicture,
+          coverImageUrl: rawCover || profilePicture,
+          backdrop: item.backdrop || null,
+          year: item.year || '',
+          genre: item.genre || '',
+          author: item.author || '',
+          channels: [
+            { id: 'info', name: 'info', type: 'info' },
+            { id: 1, name: 'general', type: 'text' },
+            { id: 2, name: 'spoilers', type: 'text' },
+            { id: 3, name: 'requests', type: 'text' }
+          ],
+          members: [currentUserMember],
+          mediaDetails: item.mediaDetails || null
         };
-      }
-      setSystemClubs((prev) =>
-        prev.map((c) => (c.id === targetClub.id ? targetClub : c))
-      );
-    }
-
-    setClubs((prev) => {
-      const alreadyJoined = prev.some(
-        (c) => c.id === targetClub.id || c.name.toLowerCase() === targetClub.name.toLowerCase()
-      );
-      if (alreadyJoined) {
-        return prev.map((c) =>
-          (c.id === targetClub.id || c.name.toLowerCase() === targetClub.name.toLowerCase())
-            ? targetClub
-            : c
+      } else {
+        const existingMembers = targetClub.members || [];
+        const alreadyIn = existingMembers.some(
+          (m) =>
+            (m.id && user?.id && String(m.id) === String(user.id)) ||
+            (m.name || m.username || '').toLowerCase() === (user?.username || '').toLowerCase()
         );
+        if (!alreadyIn) {
+          const updatedMembers = [...existingMembers, currentUserMember];
+          targetClub = {
+            ...targetClub,
+            members: updatedMembers,
+            memberCount: updatedMembers.length
+          };
+        }
       }
-      return [...prev, targetClub];
-    });
 
-    setActiveTab('clubs');
-    setSelectedClubId(targetClub.id);
-    if (targetClub.channels?.length) {
-      setSelectedChannelId(targetClub.channels[0].id);
+      // 3. Update systemClubs and clubs state immediately
+      setSystemClubs((prev) => [
+        ...prev.filter((c) => String(c.id) !== String(targetClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
+        targetClub
+      ]);
+
+      setClubs((prev) => [
+        ...prev.filter((c) => String(c.id) !== String(targetClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
+        targetClub
+      ]);
+
+      setSelectedClubId(targetClub.id);
+      const infoChannel = (targetClub.channels || []).find(
+        (ch) => ch.type === 'info' || ch.id === 'info' || (ch.name || '').toLowerCase() === 'info'
+      );
+      setSelectedChannelId(infoChannel ? infoChannel.id : (targetClub.channels?.[0]?.id || 'info'));
+
+      // 4. Background sync with backend
+      if (currentToken) {
+        fetchMyClubsApi().then((freshClubs) => {
+          if (Array.isArray(freshClubs)) {
+            setClubs((prev) => {
+              const merged = [...freshClubs];
+              if (targetClub && !merged.some((c) => String(c.id) === String(targetClub.id) || (c.name || '').trim().toLowerCase() === itemName)) {
+                merged.push(targetClub);
+              }
+              return merged;
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error in handleJoinClub:', err);
     }
-    setSearchQuery('');
-
-    fetchMyClubsApi().then((freshClubs) => {
-      if (Array.isArray(freshClubs)) {
-        setClubs(freshClubs);
-      }
-    });
   };
 
   // Trigger creation flow by prompting user with moderator explanation popup
   const handleCreateClub = (item) => {
-    const itemName = (item.title || item.name || '').toLowerCase();
-    const existing = systemClubs.find(
-      (c) =>
-        (c.name && c.name.toLowerCase() === itemName) ||
-        (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
-        (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
-    );
+    if (!item) return;
+    const itemName = (item.title || item.name || '').trim().toLowerCase();
+    const itemExtId = item.externalId ? String(item.externalId).trim() : null;
+
+    const existing = (systemClubs || []).find((c) => {
+      if (!c) return false;
+      const cName = (c.name || '').trim().toLowerCase();
+      if (cName && cName === itemName) return true;
+      if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
+      return false;
+    });
+
     if (existing) {
       handleJoinClub(existing);
       return;
@@ -852,87 +882,140 @@ const HomePage = () => {
   const handleConfirmCreateClub = async (item) => {
     if (!item) return;
 
-    const itemName = (item.title || item.name || '').toLowerCase();
-    const existing = systemClubs.find(
-      (c) =>
-        (c.name && c.name.toLowerCase() === itemName) ||
-        (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
-        (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
-    );
-    if (existing) {
-      await handleJoinClub(existing);
+    try {
+      const itemName = (item.title || item.name || '').trim().toLowerCase();
+      const itemExtId = item.externalId ? String(item.externalId).trim() : null;
+
+      // Close modal and search immediately for instant user responsiveness
       setPendingClubToCreate(null);
-      return;
+      setSearchQuery('');
+      setActiveTab('clubs');
+
+      const existing = (systemClubs || []).find((c) => {
+        if (!c) return false;
+        const cName = (c.name || '').trim().toLowerCase();
+        if (cName && cName === itemName) return true;
+        if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
+        return false;
+      });
+
+      if (existing) {
+        await handleJoinClub(existing);
+        return;
+      }
+
+      const currentUserMod = {
+        id: user?.id || 1,
+        name: user?.username || 'Moderator',
+        username: user?.username || 'Moderator',
+        img: user?.pfp || user?.avatarUrl || defaultAvatar,
+        role: 'moderator',
+        status: 'Online',
+        isOnline: true
+      };
+
+      const clubName = item.title || item.name || 'Club';
+      const rawCover = item.photo || item.coverImageUrl || item.img || item.coverLarge;
+      const hasCover = Boolean(rawCover && rawCover.trim() && rawCover !== '/default-club.png');
+      const profilePicture = hasCover
+        ? rawCover.trim()
+        : generateClubProfilePicture(clubName, item.type || item.mediaType);
+
+      const clubPayload = {
+        ...item,
+        name: clubName,
+        coverImageUrl: profilePicture,
+        photo: profilePicture,
+        img: profilePicture
+      };
+
+      const currentToken = getToken();
+      let createdClub = null;
+
+      if (currentToken) {
+        createdClub = await createClubApi(clubPayload);
+        if (!createdClub) {
+          // If creation returned null (e.g. backend returned 400 because club already exists), fetch all clubs and join
+          const freshAll = await fetchAllClubsApi();
+          if (Array.isArray(freshAll) && freshAll.length > 0) {
+            setSystemClubs(freshAll);
+            const match = freshAll.find((c) => (c.name || '').trim().toLowerCase() === itemName);
+            if (match) {
+              await joinClubApi(match.id);
+              const freshClub = await fetchClubApi(match.id);
+              createdClub = freshClub || match;
+            }
+          }
+        }
+      }
+
+      const newClub = createdClub ? {
+        ...createdClub,
+        img: createdClub.img || profilePicture,
+        coverImageUrl: createdClub.coverImageUrl || profilePicture,
+        members: (createdClub.members && createdClub.members.length > 0)
+          ? createdClub.members
+          : [currentUserMod]
+      } : {
+        id: Date.now(),
+        name: clubName,
+        mediaType: item.type || item.mediaType || 'movies',
+        externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
+        externalId: item.externalId || String(item.id || Date.now()),
+        img: profilePicture,
+        coverImageUrl: profilePicture,
+        backdrop: item.backdrop || null,
+        year: item.year || '',
+        genre: item.genre || '',
+        author: item.author || '',
+        pages: item.pages || null,
+        publisher: item.publisher || null,
+        firstSentence: item.firstSentence || null,
+        audience: item.audience || null,
+        rating: item.rating || null,
+        channels: [
+          { id: 'info', name: 'info', type: 'info' },
+          { id: 1, name: 'general', type: 'text' },
+          { id: 2, name: 'spoilers', type: 'text' },
+          { id: 3, name: 'requests', type: 'text' }
+        ],
+        members: [currentUserMod],
+        mediaDetails: item.mediaDetails || null
+      };
+
+      setSystemClubs((prev) => [
+        ...prev.filter((c) => String(c.id) !== String(newClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
+        newClub
+      ]);
+
+      setClubs((prev) => [
+        ...prev.filter((c) => String(c.id) !== String(newClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
+        newClub
+      ]);
+
+      setSelectedClubId(newClub.id);
+      const infoChannel = (newClub.channels || []).find(
+        (ch) => ch.type === 'info' || ch.id === 'info' || (ch.name || '').toLowerCase() === 'info'
+      );
+      setSelectedChannelId(infoChannel ? infoChannel.id : (newClub.channels?.[0]?.id || 'info'));
+
+      if (currentToken) {
+        fetchMyClubsApi().then((freshClubs) => {
+          if (Array.isArray(freshClubs)) {
+            setClubs((prev) => {
+              const merged = [...freshClubs];
+              if (newClub && !merged.some((c) => String(c.id) === String(newClub.id) || (c.name || '').trim().toLowerCase() === itemName)) {
+                merged.push(newClub);
+              }
+              return merged;
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error in handleConfirmCreateClub:', err);
+      setPendingClubToCreate(null);
     }
-
-    const currentUserMod = {
-      id: user?.id || 1,
-      name: user?.username || 'Moderator',
-      username: user?.username || 'Moderator',
-      img: user?.pfp || user?.avatarUrl || defaultAvatar,
-      role: 'moderator'
-    };
-
-    const clubName = item.title || item.name || 'Club';
-    const rawCover = item.photo || item.coverImageUrl || item.img || item.coverLarge;
-    const hasCover = Boolean(rawCover && rawCover.trim() && rawCover !== '/default-club.png');
-    const profilePicture = hasCover
-      ? rawCover.trim()
-      : generateClubProfilePicture(clubName, item.type || item.mediaType);
-
-    const clubPayload = {
-      ...item,
-      name: clubName,
-      coverImageUrl: profilePicture,
-      photo: profilePicture,
-      img: profilePicture
-    };
-
-    const createdClub = await createClubApi(clubPayload);
-    const newClub = createdClub ? {
-      ...createdClub,
-      img: createdClub.img || profilePicture,
-      coverImageUrl: createdClub.coverImageUrl || profilePicture,
-      members: (createdClub.members && createdClub.members.length > 0)
-        ? createdClub.members
-        : [currentUserMod]
-    } : {
-      id: Date.now(),
-      name: clubName,
-      mediaType: item.type || item.mediaType || 'movies',
-      externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
-      externalId: item.externalId || String(item.id),
-      img: profilePicture,
-      coverImageUrl: profilePicture,
-      backdrop: item.backdrop || null,
-      year: item.year,
-      genre: item.genre,
-      author: item.author,
-      pages: item.pages || null,
-      publisher: item.publisher || null,
-      firstSentence: item.firstSentence || null,
-      audience: item.audience || null,
-      rating: item.rating || null,
-      channels: [
-        { id: 'info', name: 'info', type: 'info' },
-        { id: 1, name: 'general', type: 'text' },
-        { id: 2, name: 'spoilers', type: 'text' },
-        { id: 3, name: 'reviews', type: 'text' },
-        { id: 4, name: 'requests', type: 'text' }
-      ],
-      members: [currentUserMod],
-      mediaDetails: item.mediaDetails || null
-    };
-
-    setSystemClubs((prev) => [...prev, newClub]);
-    setClubs((prev) => [...prev, newClub]);
-    setActiveTab('clubs');
-    setSelectedClubId(newClub.id);
-    if (newClub.channels?.length) {
-      setSelectedChannelId(newClub.channels[0].id);
-    }
-    setPendingClubToCreate(null);
-    setSearchQuery('');
   };
 
   // Update club channels or metadata

@@ -152,7 +152,7 @@ const EditChannelsModal = ({
     }
 
     // If active channel was deleted, select info or first channel
-    if (selectedChannelId === channelId) {
+    if (String(selectedChannelId) === String(channelId)) {
       const fallbackId = updatedChannels[0]?.id || 'info';
       if (onSelectChannel) {
         onSelectChannel(fallbackId);
@@ -241,7 +241,9 @@ const EditChannelsModal = ({
                   channel.id === 'info';
                 const isEditing = editingChannelId === channel.id;
                 const isConfirmingDelete = confirmDeleteId === channel.id;
-                const isActive = selectedChannelId === channel.id;
+                const isActive =
+                  String(selectedChannelId) === String(channel.id) ||
+                  (selectedChannelId === 'info' && isInfo);
 
                 return (
                   <div

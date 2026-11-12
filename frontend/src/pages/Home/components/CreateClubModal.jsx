@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { generateClubProfilePicture } from '../../../services/clubService';
 import './CreateClubModal.css';
 
 const CreateClubModal = ({ item, onConfirm, onClose }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -14,6 +16,18 @@ const CreateClubModal = ({ item, onConfirm, onClose }) => {
   }, [onClose]);
 
   if (!item) return null;
+
+  const handleConfirm = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      if (onConfirm) {
+        await onConfirm();
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const typeLabel = item.type === 'tv' ? 'TV Series' : item.type === 'books' ? 'Book' : 'Movie';
 
@@ -114,17 +128,23 @@ const CreateClubModal = ({ item, onConfirm, onClose }) => {
 
           {/* Channels Note */}
           <p className="create-club-channels-note">
-            The official information board (<strong>#info</strong>) and standard discussion channels (<strong>#general</strong>, <strong>#spoilers</strong>, <strong>#reviews</strong>, and <strong>#requests</strong>) will be automatically created so members can jump right in.
+            The official information board (<strong>#info</strong>) and standard discussion channels (<strong>#general</strong>, <strong>#spoilers</strong>, and <strong>#requests</strong>) will be automatically created so members can jump right in.
           </p>
         </div>
 
         {/* Actions */}
         <div className="create-club-modal-actions">
-          <button type="button" className="create-club-cancel-btn" onClick={onClose}>
+          <button type="button" className="create-club-cancel-btn" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </button>
-          <button type="button" className="create-club-confirm-btn" onClick={onConfirm}>
-            Create Club & Become Moderator
+          <button
+            type="button"
+            className="create-club-confirm-btn"
+            onClick={handleConfirm}
+            disabled={isSubmitting}
+            style={{ opacity: isSubmitting ? 0.75 : 1, cursor: isSubmitting ? 'wait' : 'pointer' }}
+          >
+            {isSubmitting ? 'Creating Club...' : 'Create Club & Become Moderator'}
           </button>
         </div>
       </div>

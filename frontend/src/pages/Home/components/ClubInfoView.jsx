@@ -315,16 +315,6 @@ const ClubInfoView = ({ club, activeChannel, onSelectChannel }) => {
 
               <div className="info-channel-card">
                 <div className="info-channel-header">
-                  <span className="info-channel-name">✦ reviews</span>
-                  <span className="info-channel-badge">Reviews</span>
-                </div>
-                <p className="info-channel-desc">
-                  Ratings, in-depth critiques, personal analyses, and review discussions.
-                </p>
-              </div>
-
-              <div className="info-channel-card">
-                <div className="info-channel-header">
                   <span className="info-channel-name">✦ requests</span>
                   <span className="info-channel-badge">Member Requests</span>
                 </div>

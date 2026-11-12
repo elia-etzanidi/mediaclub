@@ -52,18 +52,20 @@ const SearchPopup = ({
         ) : results.length > 0 ? (
           <div className="search-results-list">
             {results.map((item) => {
-              const itemTitle = (item.title || item.name || '').toLowerCase();
+              const itemTitle = (item.title || item.name || '').trim().toLowerCase();
               const isJoined = joinedClubTitles.some(
-                (t) => (t || '').toLowerCase() === itemTitle
+                (t) => (t || '').trim().toLowerCase() === itemTitle
               );
-              const matchedClub = (systemClubs || []).find(
-                (c) =>
-                  (c.name && c.name.toLowerCase() === itemTitle) ||
-                  (c.externalId && item.id && String(c.externalId) === String(item.id)) ||
-                  (c.externalId && item.externalId && String(c.externalId) === String(item.externalId))
-              );
+              const matchedClub = (systemClubs || []).find((c) => {
+                if (!c) return false;
+                const cName = (c.name || '').trim().toLowerCase();
+                if (cName && cName === itemTitle) return true;
+                if (c.externalId && item.externalId && String(c.externalId).trim() === String(item.externalId).trim()) return true;
+                if ((item.isClub || item.channels) && String(c.id) === String(item.id)) return true;
+                return false;
+              });
               const clubExists = Boolean(matchedClub) || existingClubTitles.some(
-                (t) => (t || '').toLowerCase() === itemTitle
+                (t) => (t || '').trim().toLowerCase() === itemTitle
               );
 
               const subText = item.type === 'books'
@@ -77,7 +79,8 @@ const SearchPopup = ({
                   onClick={() => {
                     if (isJoined) return;
                     if (clubExists) {
-                      if (onJoinClub) onJoinClub(matchedClub || item);
+                      const joinedTarget = matchedClub ? { ...item, ...matchedClub } : item;
+                      if (onJoinClub) onJoinClub(joinedTarget);
                     } else {
                       if (onCreateClub) onCreateClub(item);
                     }
@@ -115,7 +118,8 @@ const SearchPopup = ({
                         className="search-result-join-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (onJoinClub) onJoinClub(matchedClub || item);
+                          const joinedTarget = matchedClub ? { ...item, ...matchedClub } : item;
+                          if (onJoinClub) onJoinClub(joinedTarget);
                         }}
                       >
                         Join Club

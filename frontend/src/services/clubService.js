@@ -30,58 +30,82 @@ export const generateClubProfilePicture = (name, mediaType = 'movies') => {
 };
 
 export const normalizeClub = (club) => {
-  if (!club) return null;
+  if (!club || typeof club !== 'object') return null;
 
-  const channels = (club.channels || []).map((ch) => ({
-    id: ch.id,
-    name: ch.name,
-    type: (ch.type || '').toLowerCase() === 'info' ? 'info' : 'text'
-  }));
+  const rawChannels = Array.isArray(club.channels) ? club.channels : [];
+  const channels = rawChannels
+    .filter(Boolean)
+    .map((ch) => ({
+      id: ch.id ?? 'info',
+      name: ch.name || (ch.type ? String(ch.type).toLowerCase() : 'channel'),
+      type: (ch.type || '').toLowerCase() === 'info' ? 'info' : 'text'
+    }));
 
-  if (!channels.some((c) => c.id === 'info' || c.type === 'info')) {
+  if (!channels.some((c) => c.id === 'info' || c.type === 'info' || (c.name || '').toLowerCase() === 'info')) {
     channels.unshift({ id: 'info', name: 'info', type: 'info' });
   }
 
-  const mediaTypeStr = (club.mediaType || 'movies').toLowerCase();
+  // Ensure standard channel order: info, general, spoilers, requests, then custom channels
+  const standardOrder = ['info', 'general', 'spoilers', 'requests'];
+  channels.sort((a, b) => {
+    const aName = (a?.name || '').toLowerCase();
+    const bName = (b?.name || '').toLowerCase();
+    const aIsInfo = a?.type === 'info' || a?.id === 'info' || aName === 'info';
+    const bIsInfo = b?.type === 'info' || b?.id === 'info' || bName === 'info';
+    const aIdx = aIsInfo ? 0 : standardOrder.indexOf(aName);
+    const bIdx = bIsInfo ? 0 : standardOrder.indexOf(bName);
+
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+    if (aIdx !== -1) return -1;
+    if (bIdx !== -1) return 1;
+    return 0;
+  });
+
+  const mediaTypeStr = (club.mediaType || club.type || 'movies').toLowerCase();
   let mediaType = mediaTypeStr;
   if (mediaTypeStr === 'movie') mediaType = 'movies';
   else if (mediaTypeStr === 'book') mediaType = 'books';
   else if (mediaTypeStr === 'show') mediaType = 'tv';
   else if (mediaTypeStr === 'game') mediaType = 'games';
 
-  const clubName = club.name || 'Club';
+  const clubName = club.name || club.title || 'Club';
   const rawCover = club.coverImageUrl || club.img || club.photo || club.coverLarge;
-  const hasCover = Boolean(rawCover && rawCover !== '/default-club.png' && rawCover.trim());
+  const hasCover = Boolean(rawCover && rawCover !== '/default-club.png' && typeof rawCover === 'string' && rawCover.trim());
   const coverUrl = hasCover ? rawCover.trim() : generateClubProfilePicture(clubName, mediaType);
+
+  const rawMembers = Array.isArray(club.members) ? club.members : [];
+  const members = rawMembers.filter(Boolean).map((m) => {
+    const isOnline = m.status === 'ONLINE' || m.status === 'Online' || m.isOnline === true;
+    const roleStr = typeof m.role === 'string' ? m.role.toLowerCase() : 'member';
+    return {
+      id: m.id || m.userId,
+      name: m.name || m.username || 'Member',
+      username: m.username || m.name || 'Member',
+      img: m.img || m.avatarUrl || defaultAvatar,
+      avatarUrl: m.avatarUrl || m.img || defaultAvatar,
+      role: roleStr,
+      status: isOnline ? 'Online' : 'Offline',
+      isOnline
+    };
+  });
 
   return {
     id: club.id,
     name: clubName,
     mediaType,
-    externalSource: club.externalSource,
-    externalId: club.externalId,
+    externalSource: club.externalSource || (mediaType === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
+    externalId: club.externalId ? String(club.externalId) : (club.id ? String(club.id) : null),
     img: coverUrl,
     coverImageUrl: coverUrl,
+    photo: coverUrl,
     backdrop: club.backdrop || null,
     description: club.description || '',
     year: club.releaseDate || club.year || '',
     genre: club.genre || '',
     author: club.author || '',
     channels,
-    members: (club.members || []).map((m) => {
-      const isOnline = m.status === 'ONLINE' || m.status === 'Online' || m.isOnline === true;
-      return {
-        id: m.id || m.userId,
-        name: m.name || m.username,
-        username: m.username || m.name,
-        img: m.img || m.avatarUrl || defaultAvatar,
-        avatarUrl: m.avatarUrl || m.img || defaultAvatar,
-        role: (m.role || 'member').toLowerCase(),
-        status: isOnline ? 'Online' : 'Offline',
-        isOnline
-      };
-    }),
-    memberCount: club.memberCount || club.members?.length || 1,
+    members,
+    memberCount: club.memberCount || members.length || 1,
     mediaDetails: club.mediaDetails || null
   };
 };
@@ -132,10 +156,11 @@ export const fetchAllClubsApi = async () => {
 
 export const fetchClubApi = async (clubId) => {
   const token = localStorage.getItem('token');
-  if (!token || !clubId || typeof clubId !== 'number') return null;
+  const numId = Number(clubId);
+  if (!token || !clubId || isNaN(numId)) return null;
 
   try {
-    const res = await fetch(`/api/clubs/${clubId}`, {
+    const res = await fetch(`/api/clubs/${numId}`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -152,10 +177,11 @@ export const fetchClubApi = async (clubId) => {
 
 export const fetchClubMembersApi = async (clubId) => {
   const token = localStorage.getItem('token');
-  if (!token || !clubId || typeof clubId !== 'number') return null;
+  const numId = Number(clubId);
+  if (!token || !clubId || isNaN(numId)) return null;
 
   try {
-    const res = await fetch(`/api/clubs/${clubId}/members`, {
+    const res = await fetch(`/api/clubs/${numId}/members`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -186,10 +212,11 @@ export const fetchClubMembersApi = async (clubId) => {
 
 export const joinClubApi = async (clubId) => {
   const token = localStorage.getItem('token');
-  if (!token || !clubId || typeof clubId !== 'number') return null;
+  const numId = Number(clubId);
+  if (!token || !clubId || isNaN(numId)) return null;
 
   try {
-    const res = await fetch(`/api/clubs/${clubId}/join`, {
+    const res = await fetch(`/api/clubs/${numId}/join`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`
@@ -241,7 +268,7 @@ export const createClubApi = async (clubData) => {
         externalSource: sourceEnum,
         externalId: String(clubData.externalId || clubData.id || Date.now()),
         coverImageUrl,
-        description: clubData.description || clubData.plot || '',
+        description: (clubData.description || clubData.plot || '').slice(0, 1900),
         releaseDate: String(clubData.year || clubData.releaseDate || '')
       })
     });
@@ -257,10 +284,11 @@ export const createClubApi = async (clubData) => {
 
 export const createChannelApi = async (clubId, { name, type }) => {
   const token = localStorage.getItem('token');
-  if (!token || !clubId || typeof clubId !== 'number') return null;
+  const numId = Number(clubId);
+  if (!token || !clubId || isNaN(numId)) return null;
 
   try {
-    const res = await fetch(`/api/clubs/${clubId}/channels`, {
+    const res = await fetch(`/api/clubs/${numId}/channels`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -279,10 +307,11 @@ export const createChannelApi = async (clubId, { name, type }) => {
 
 export const deleteChannelApi = async (channelId) => {
   const token = localStorage.getItem('token');
-  if (!token || !channelId || typeof channelId !== 'number') return false;
+  const numId = Number(channelId);
+  if (!token || !channelId || isNaN(numId)) return false;
 
   try {
-    const res = await fetch(`/api/clubs/channels/${channelId}`, {
+    const res = await fetch(`/api/clubs/channels/${numId}`, {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${token}`
@@ -297,10 +326,11 @@ export const deleteChannelApi = async (channelId) => {
 
 export const leaveClubApi = async (clubId) => {
   const token = localStorage.getItem('token');
-  if (!token || !clubId || typeof clubId !== 'number') return false;
+  const numId = Number(clubId);
+  if (!token || !clubId || isNaN(numId)) return false;
 
   try {
-    const res = await fetch(`/api/clubs/${clubId}/leave`, {
+    const res = await fetch(`/api/clubs/${numId}/leave`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`
@@ -315,10 +345,12 @@ export const leaveClubApi = async (clubId) => {
 
 export const promoteMemberApi = async (clubId, targetUserId) => {
   const token = localStorage.getItem('token');
-  if (!token || !clubId || !targetUserId) return false;
+  const numId = Number(clubId);
+  const numUserId = Number(targetUserId);
+  if (!token || !clubId || isNaN(numId) || !targetUserId || isNaN(numUserId)) return false;
 
   try {
-    const res = await fetch(`/api/clubs/${clubId}/members/${targetUserId}/promote`, {
+    const res = await fetch(`/api/clubs/${numId}/members/${numUserId}/promote`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`
@@ -333,10 +365,12 @@ export const promoteMemberApi = async (clubId, targetUserId) => {
 
 export const demoteMemberApi = async (clubId, targetUserId) => {
   const token = localStorage.getItem('token');
-  if (!token || !clubId || !targetUserId) return false;
+  const numId = Number(clubId);
+  const numUserId = Number(targetUserId);
+  if (!token || !clubId || isNaN(numId) || !targetUserId || isNaN(numUserId)) return false;
 
   try {
-    const res = await fetch(`/api/clubs/${clubId}/members/${targetUserId}/demote`, {
+    const res = await fetch(`/api/clubs/${numId}/members/${numUserId}/demote`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`

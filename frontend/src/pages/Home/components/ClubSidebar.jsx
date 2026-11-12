@@ -32,7 +32,11 @@ const ClubSidebar = ({
   // Determine current active channel if not directly supplied
   const currentActiveChannel =
     activeChannel ||
-    activeChannelsList.find((c) => c.id === selectedChannelId) ||
+    activeChannelsList.find(
+      (c) =>
+        String(c.id) === String(selectedChannelId) ||
+        (selectedChannelId === 'info' && (c.name === 'info' || c.type === 'info'))
+    ) ||
     activeChannelsList[0];
 
   // Determine if current user is moderator
@@ -568,7 +572,10 @@ const ClubSidebar = ({
               <div
                 key={channel.id}
                 className={`channel-cell ${
-                  selectedChannelId === channel.id ? 'active' : ''
+                  String(selectedChannelId) === String(channel.id) ||
+                  (selectedChannelId === 'info' && isInfo)
+                    ? 'active'
+                    : ''
                 }`}
                 onClick={() => onSelectChannel(channel.id)}
                 role="button"

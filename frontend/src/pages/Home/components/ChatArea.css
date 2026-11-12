@@ -195,6 +195,58 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
+/* --- Requests Channel Alert Banner --- */
+.requests-channel-banner {
+  background: linear-gradient(90deg, var(--bg-sidebar) 0%, rgba(186, 211, 206, 0.45) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--primary-dark);
+  flex-shrink: 0;
+  animation: bannerSlideDown 0.2s ease-out;
+}
+
+.requests-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.requests-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-dark);
+  flex-shrink: 0;
+}
+
+.requests-banner-text strong {
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.requests-banner-close {
+  background: none;
+  border: none;
+  color: var(--primary-dark);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.requests-banner-close:hover {
+  opacity: 1;
+  background: rgba(0, 70, 67, 0.08);
+}
+
 /* --- Messages Container --- */
 .chat-messages-container {
   flex: 1;
@@ -259,6 +311,24 @@
   line-height: 1.5;
   max-width: 580px;
   margin: 0;
+}
+
+/* Requests Specific Welcome Banner */
+.requests-welcome-banner .channel-welcome-icon-box.requests-icon-box {
+  background: linear-gradient(135deg, var(--primary-light) 0%, rgba(186, 211, 206, 0.3) 100%);
+  color: var(--primary-dark);
+  box-shadow: 0 4px 12px rgba(0, 70, 67, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.requests-welcome-banner .channel-welcome-icon-box.requests-icon-box svg {
+  display: block;
+}
+
+.requests-welcome-banner .channel-welcome-desc {
+  max-width: 660px;
 }
 
 /* --- Date Divider --- */

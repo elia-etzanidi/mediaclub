@@ -15,12 +15,31 @@ import { websocketService } from '../../../services/websocketService';
 import DeleteMessageModal from './DeleteMessageModal';
 
 // Standard topic hints by channel name
+const LightbulbIcon = ({ className = '', size = 20 }) => (
+  <svg
+    className={className}
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+    <path d="M9 18h6" />
+    <path d="M10 22h4" />
+  </svg>
+);
+
 const CHANNEL_TOPICS = {
   general: 'General discussion & community talk',
   spoilers: '⚠️ Spoilers allowed! Discuss plot twists & endings freely',
   theories: 'Fan theories, hidden easter eggs & lore speculation',
   reviews: 'Member reviews, impressions & ratings',
-  requests: 'Suggest new channels, watchlist additions & ideas',
+  requests: 'Pitch new channels, ask for moderator roles & share ideas',
   episodes: 'Episode-by-episode breakdown and discussion'
 };
 
@@ -45,6 +64,7 @@ const ChatArea = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [revealedSpoilers, setRevealedSpoilers] = useState({});
   const [showSpoilerBanner, setShowSpoilerBanner] = useState(true);
+  const [showRequestsBanner, setShowRequestsBanner] = useState(true);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
   const [isDeletingMessage, setIsDeletingMessage] = useState(false);
@@ -97,6 +117,9 @@ const ChatArea = ({
   const isSpoilerChannel =
     activeChannelName.toLowerCase().includes('spoiler') ||
     activeChannel?.type === 'spoilers';
+  const isRequestsChannel =
+    activeChannelName.toLowerCase().includes('request') ||
+    activeChannel?.type === 'requests';
 
   // Topic description
   const channelTopic =
@@ -123,6 +146,7 @@ const ChatArea = ({
     setInputText('');
     setSearchQuery('');
     setShowSpoilerBanner(true);
+    setShowRequestsBanner(true);
     setTypingUsers({});
 
     // Subscribe to real-time WebSocket channel events
@@ -584,6 +608,29 @@ const ChatArea = ({
         </div>
       )}
 
+      {/* Requests Channel Alert Banner */}
+      {isRequestsChannel && showRequestsBanner && (
+        <div className="requests-channel-banner" role="alert">
+          <div className="requests-banner-left">
+            <span className="requests-banner-icon">
+              <LightbulbIcon size={18} />
+            </span>
+            <span className="requests-banner-text">
+              <strong>Club Requests:</strong> Have ideas for {clubName}? Pitch new channels, suggest club activities, or ask moderators about becoming a moderator!
+            </span>
+          </div>
+          <button
+            type="button"
+            className="requests-banner-close"
+            onClick={() => setShowRequestsBanner(false)}
+            title="Dismiss banner"
+            aria-label="Dismiss requests notice"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Messages Scroll Container */}
       <div
         className="chat-messages-container"
@@ -592,16 +639,28 @@ const ChatArea = ({
       >
         {/* Welcome Banner at the top of the channel */}
         {!searchQuery && (
-          <div className="channel-welcome-banner">
-            <div className="channel-welcome-icon-box">
-              <span>✦</span>
+          isRequestsChannel ? (
+            <div className="channel-welcome-banner requests-welcome-banner">
+              <div className="channel-welcome-icon-box requests-icon-box">
+                <LightbulbIcon size={28} />
+              </div>
+              <h1 className="channel-welcome-title">Welcome to ✦ requests!</h1>
+              <p className="channel-welcome-desc">
+                Have an idea or want to help shape <strong>{clubName}</strong>? This channel is your direct line to the club moderators. Feel free to request new channels, suggest events or watchlist additions, or ask to be promoted to moderator!
+              </p>
             </div>
-            <h1 className="channel-welcome-title">Welcome to ✦ {activeChannelName}!</h1>
-            <p className="channel-welcome-desc">
-              This is the official start of the <strong>✦ {activeChannelName}</strong> channel in{' '}
-              <strong>{clubName}</strong>. Kick off the conversation or say hello to fellow members!
-            </p>
-          </div>
+          ) : (
+            <div className="channel-welcome-banner">
+              <div className="channel-welcome-icon-box">
+                <span>✦</span>
+              </div>
+              <h1 className="channel-welcome-title">Welcome to ✦ {activeChannelName}!</h1>
+              <p className="channel-welcome-desc">
+                This is the official start of the <strong>✦ {activeChannelName}</strong> channel in{' '}
+                <strong>{clubName}</strong>. Kick off the conversation or say hello to fellow members!
+              </p>
+            </div>
+          )
         )}
 
         {/* Empty Search Results */}

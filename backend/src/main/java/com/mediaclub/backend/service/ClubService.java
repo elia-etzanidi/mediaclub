@@ -17,6 +17,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -33,7 +34,7 @@ public class ClubService {
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
-     * Creates a club and its 4 standard channels (general, spoilers, info, requests)
+     * Creates a club and its 4 standard channels (info, general, spoilers, requests)
      * in a single atomic transaction. The creator automatically becomes MODERATOR.
      */
     @Transactional
@@ -62,11 +63,11 @@ public class ClubService {
                 .build();
         club = clubRepository.save(club);
 
-        // auto-create the 4 standard channels
+        // auto-create the 4 standard channels in order: info, general, spoilers, requests
         List<Channel> channels = List.of(
+                Channel.builder().club(club).name("info").type(ChannelType.INFO).build(),
                 Channel.builder().club(club).name("general").type(ChannelType.GENERAL).build(),
                 Channel.builder().club(club).name("spoilers").type(ChannelType.SPOILERS).build(),
-                Channel.builder().club(club).name("info").type(ChannelType.INFO).build(),
                 Channel.builder().club(club).name("requests").type(ChannelType.REQUESTS).build()
         );
         channels = channelRepository.saveAll(channels);
@@ -84,7 +85,7 @@ public class ClubService {
 
     public ClubResponse getClub(Long clubId) {
         Club club = getClubOrThrow(clubId);
-        List<Channel> channels = channelRepository.findByClubId(clubId);
+        List<Channel> channels = getOrderedChannels(clubId);
         List<Membership> memberships = membershipRepository.findByClubId(clubId);
         return ClubResponse.from(club, channels, memberships);
     }
@@ -93,7 +94,7 @@ public class ClubService {
         List<Membership> memberships = membershipRepository.findByUserId(userId);
         return memberships.stream().map(m -> {
             Club club = m.getClub();
-            List<Channel> channels = channelRepository.findByClubId(club.getId());
+            List<Channel> channels = getOrderedChannels(club.getId());
             List<Membership> clubMemberships = membershipRepository.findByClubId(club.getId());
             return ClubResponse.from(club, channels, clubMemberships);
         }).toList();
@@ -101,7 +102,7 @@ public class ClubService {
 
     public List<ClubResponse> getAllClubs() {
         return clubRepository.findAll().stream().map(club -> {
-            List<Channel> channels = channelRepository.findByClubId(club.getId());
+            List<Channel> channels = getOrderedChannels(club.getId());
             List<Membership> clubMemberships = membershipRepository.findByClubId(club.getId());
             return ClubResponse.from(club, channels, clubMemberships);
         }).toList();
@@ -280,6 +281,22 @@ public class ClubService {
     }
 
     // --- internal helpers ---
+
+    private List<Channel> getOrderedChannels(Long clubId) {
+        List<Channel> channels = channelRepository.findByClubIdOrderByIdAsc(clubId);
+        List<ChannelType> standardOrder = List.of(
+                ChannelType.INFO,
+                ChannelType.GENERAL,
+                ChannelType.SPOILERS,
+                ChannelType.REQUESTS
+        );
+        return channels.stream()
+                .sorted(Comparator.<Channel>comparingInt(c -> {
+                    int idx = standardOrder.indexOf(c.getType());
+                    return idx != -1 ? idx : Integer.MAX_VALUE;
+                }).thenComparing(c -> c.getId() != null ? c.getId() : 0L))
+                .toList();
+    }
 
     private Club getClubOrThrow(Long clubId) {
         return clubRepository.findById(clubId)
