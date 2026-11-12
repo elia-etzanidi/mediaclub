@@ -44,6 +44,27 @@ const getLastClubKey = (uid) => `mediaclub_${uid || 'guest'}_last_selected_club_
 const getLastPersonKey = (uid) => `mediaclub_${uid || 'guest'}_last_selected_person_id`;
 const getLastTabKey = (uid) => `mediaclub_${uid || 'guest'}_last_active_tab`;
 const getTempPersonKey = (uid) => `mediaclub_${uid || 'guest'}_temporary_dm_person`;
+const getLastChannelsKey = (uid) => `mediaclub_${uid || 'guest'}_last_channel_by_club`;
+
+const getEffectiveChannelId = (club, preferredChannelId) => {
+  if (!club || !club.channels || club.channels.length === 0) return 'info';
+
+  if (preferredChannelId !== null && preferredChannelId !== undefined) {
+    const found = club.channels.find(
+      (c) =>
+        String(c.id) === String(preferredChannelId) ||
+        (preferredChannelId === 'info' && (c.name === 'info' || c.type === 'info' || c.id === 'info'))
+    );
+    if (found) return found.id;
+  }
+
+  const infoChannel = club.channels.find(
+    (c) => c.type === 'info' || c.id === 'info' || (c.name || '').toLowerCase() === 'info'
+  );
+  if (infoChannel) return infoChannel.id;
+
+  return club.channels[0].id;
+};
 
 const HomePage = () => {
   const savedUser = getCurrentUser();
@@ -87,7 +108,40 @@ const HomePage = () => {
     } catch (e) {}
     return null;
   });
-  const [selectedChannelId, setSelectedChannelId] = useState('info');
+  const [clubChannels, setClubChannels] = useState(() => {
+    try {
+      const saved = localStorage.getItem(getLastChannelsKey(initialUserId));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (e) {}
+    return {};
+  });
+  const [selectedChannelId, setSelectedChannelId] = useState(() => {
+    try {
+      const savedClubId = localStorage.getItem(getLastClubKey(initialUserId));
+      const parsedClubId = savedClubId ? JSON.parse(savedClubId) : null;
+      const savedChannelsMap = localStorage.getItem(getLastChannelsKey(initialUserId));
+      const parsedChannelsMap = savedChannelsMap ? JSON.parse(savedChannelsMap) : {};
+
+      const savedClubsStr = localStorage.getItem(getClubsKey(initialUserId));
+      const parsedClubs = savedClubsStr ? JSON.parse(savedClubsStr) : [];
+
+      const targetClub =
+        (parsedClubs || []).find((c) => String(c.id) === String(parsedClubId)) ||
+        parsedClubs?.[0];
+      const preferred = parsedClubId != null && parsedChannelsMap
+        ? (parsedChannelsMap[parsedClubId] ?? parsedChannelsMap[String(parsedClubId)])
+        : (targetClub ? (parsedChannelsMap?.[targetClub.id] ?? parsedChannelsMap?.[String(targetClub.id)]) : null);
+
+      if (targetClub) {
+        return getEffectiveChannelId(targetClub, preferred);
+      }
+      if (preferred !== undefined && preferred !== null) return preferred;
+    } catch (e) {}
+    return 'info';
+  });
   const [showMembers, setShowMembers] = useState(true);
   const [dmUpdateTick, setDmUpdateTick] = useState(0);
 
@@ -209,6 +263,26 @@ const HomePage = () => {
       } catch (e) {}
     }
   }, [selectedPersonId, user?.id, initialUserId]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(getLastChannelsKey(user?.id || initialUserId), JSON.stringify(clubChannels));
+    } catch (e) {}
+  }, [clubChannels, user?.id, initialUserId]);
+
+  useEffect(() => {
+    if (user?.id && String(user.id) !== String(initialUserId)) {
+      try {
+        const saved = localStorage.getItem(getLastChannelsKey(user.id));
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            setClubChannels((prev) => ({ ...parsed, ...prev }));
+          }
+        }
+      } catch (e) {}
+    }
+  }, [user?.id, initialUserId]);
 
   // Ensure a chat is always selected when people exist
   useEffect(() => {
@@ -537,6 +611,33 @@ const HomePage = () => {
   // Current selected item ID for LeftPane highlighting
   const currentSelectedId = activeTab === 'clubs' ? activeClub?.id : activePerson?.id;
 
+  const lastActiveClubIdRef = useRef(activeClub?.id ?? null);
+  useEffect(() => {
+    if (activeClub?.id && String(activeClub.id) !== String(lastActiveClubIdRef.current)) {
+      lastActiveClubIdRef.current = activeClub.id;
+      const rememberedChannelId =
+        clubChannels[activeClub.id] ?? clubChannels[String(activeClub.id)];
+      const channelToSelect = getEffectiveChannelId(activeClub, rememberedChannelId);
+      setSelectedChannelId(channelToSelect);
+    }
+  }, [activeClub, clubChannels]);
+
+  const handleSelectChannel = (channelId) => {
+    setSelectedChannelId(channelId);
+    if (activeClub?.id) {
+      setClubChannels((prev) => {
+        const updated = {
+          ...prev,
+          [activeClub.id]: channelId
+        };
+        try {
+          localStorage.setItem(getLastChannelsKey(user?.id || initialUserId), JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    }
+  };
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'clubs') {
@@ -555,11 +656,18 @@ const HomePage = () => {
         return cleaned;
       });
 
-      if (!selectedClubId && clubs.length > 0) {
-        setSelectedClubId(clubs[0].id);
+      let clubToSelectId = selectedClubId;
+      if (!clubToSelectId && clubs.length > 0) {
+        clubToSelectId = clubs[0].id;
+        setSelectedClubId(clubToSelectId);
       }
-      if (activeClub?.channels?.length) {
-        setSelectedChannelId(activeClub.channels[0].id);
+      const targetClub = clubs.find((c) => String(c.id) === String(clubToSelectId)) || clubs[0];
+      if (targetClub) {
+        const rememberedChannelId =
+          clubChannels[targetClub.id] ?? clubChannels[String(targetClub.id)];
+        const channelToSelect = getEffectiveChannelId(targetClub, rememberedChannelId || selectedChannelId);
+        setSelectedChannelId(channelToSelect);
+        lastActiveClubIdRef.current = targetClub.id;
       }
     } else if (tab === 'people') {
       // The last chat the user had open will be shown!
@@ -575,9 +683,12 @@ const HomePage = () => {
   const handleSelectItem = (item) => {
     if (activeTab === 'clubs') {
       setSelectedClubId(item.id);
-      if (item.channels?.length) {
-        setSelectedChannelId(item.channels[0].id);
-      }
+      const targetClub = clubs.find((c) => String(c.id) === String(item.id)) || item;
+      const rememberedChannelId =
+        clubChannels[item.id] ?? clubChannels[String(item.id)];
+      const channelToSelect = getEffectiveChannelId(targetClub, rememberedChannelId);
+      setSelectedChannelId(channelToSelect);
+      lastActiveClubIdRef.current = item.id;
     } else {
       setSelectedPersonId(item.id);
     }
@@ -836,10 +947,11 @@ const HomePage = () => {
       });
 
       setSelectedClubId(targetClub.id);
-      const infoChannel = (targetClub.channels || []).find(
-        (ch) => ch.type === 'info' || ch.id === 'info' || (ch.name || '').toLowerCase() === 'info'
-      );
-      setSelectedChannelId(infoChannel ? infoChannel.id : (targetClub.channels?.[0]?.id || 'info'));
+      const rememberedChannelId =
+        clubChannels[targetClub.id] ?? clubChannels[String(targetClub.id)];
+      const channelToSelect = getEffectiveChannelId(targetClub, rememberedChannelId);
+      setSelectedChannelId(channelToSelect);
+      lastActiveClubIdRef.current = targetClub.id;
 
       // 4. Background sync with backend
       if (currentToken) {
@@ -991,7 +1103,21 @@ const HomePage = () => {
       const infoChannel = (newClub.channels || []).find(
         (ch) => ch.type === 'info' || ch.id === 'info' || (ch.name || '').toLowerCase() === 'info'
       );
-      setSelectedChannelId(infoChannel ? infoChannel.id : (newClub.channels?.[0]?.id || 'info'));
+      const initialChannelId = infoChannel ? infoChannel.id : (newClub.channels?.[0]?.id || 'info');
+      setSelectedChannelId(initialChannelId);
+      lastActiveClubIdRef.current = newClub.id;
+      if (newClub.id) {
+        setClubChannels((prev) => {
+          const updated = {
+            ...prev,
+            [newClub.id]: initialChannelId
+          };
+          try {
+            localStorage.setItem(getLastChannelsKey(user?.id || initialUserId), JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+      }
 
       if (currentToken) {
         fetchMyClubsApi().then((freshClubs) => {
@@ -1051,15 +1177,28 @@ const HomePage = () => {
           return true;
         })
     );
+    setClubChannels((prev) => {
+      const updated = { ...prev };
+      delete updated[clubId];
+      try {
+        localStorage.setItem(getLastChannelsKey(user?.id || initialUserId), JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
     setClubs((prev) => {
       const remaining = prev.filter((c) => c.id !== clubId);
       if (remaining.length > 0) {
-        setSelectedClubId(remaining[0].id);
-        if (remaining[0].channels?.length) {
-          setSelectedChannelId(remaining[0].channels[0].id);
-        }
+        const nextClub = remaining[0];
+        setSelectedClubId(nextClub.id);
+        const remembered =
+          clubChannels[nextClub.id] ?? clubChannels[String(nextClub.id)];
+        const channelToSelect = getEffectiveChannelId(nextClub, remembered);
+        setSelectedChannelId(channelToSelect);
+        lastActiveClubIdRef.current = nextClub.id;
       } else {
         setSelectedClubId(null);
+        lastActiveClubIdRef.current = null;
       }
       return remaining;
     });
@@ -1132,7 +1271,7 @@ const HomePage = () => {
               club={activeClub}
               currentUser={user}
               selectedChannelId={selectedChannelId}
-              onSelectChannel={setSelectedChannelId}
+              onSelectChannel={handleSelectChannel}
               showMembers={showMembers}
               onToggleMembers={() => setShowMembers((prev) => !prev)}
               onUpdateClub={handleUpdateClub}
