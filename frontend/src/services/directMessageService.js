@@ -160,6 +160,13 @@ export const fetchConversationsApi = async () => {
   return null;
 };
 
+export const isDirectMessageDeleted = (m) => {
+  if (!m) return true;
+  if (m.deleted === true || m.isDeleted === true) return true;
+  const content = (m.content || '').trim().toLowerCase();
+  return content === '[message deleted]' || content === '[deleted message]';
+};
+
 /**
  * Fetch DM message history for a given user
  */
@@ -203,18 +210,20 @@ export const fetchDirectMessages = async (person, currentUser) => {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const normalized = data.map((m) => ({
-            id: m.id,
-            conversationId: m.conversationId,
-            senderId: m.senderId,
-            senderUsername: m.senderUsername,
-            senderAvatarUrl: m.senderId === currentUser?.id ? (currentUser?.pfp || defaultAvatar) : (person.img || defaultAvatar),
-            content: m.content,
-            sentAt: m.sentAt,
-            editedAt: m.editedAt,
-            deleted: m.deleted,
-            reactions: []
-          }));
+          const normalized = data
+            .filter((m) => !isDirectMessageDeleted(m))
+            .map((m) => ({
+              id: m.id,
+              conversationId: m.conversationId,
+              senderId: m.senderId,
+              senderUsername: m.senderUsername,
+              senderAvatarUrl: m.senderId === currentUser?.id ? (currentUser?.pfp || defaultAvatar) : (person.img || defaultAvatar),
+              content: m.content,
+              sentAt: m.sentAt,
+              editedAt: m.editedAt,
+              deleted: false,
+              reactions: []
+            }));
 
           // Cache locally
           localStorage.setItem(getDmStorageKey(person, currentUser?.id), JSON.stringify(normalized));
@@ -233,7 +242,11 @@ export const fetchDirectMessages = async (person, currentUser) => {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed)) {
-        return parsed;
+        const cleaned = parsed.filter((m) => !isDirectMessageDeleted(m));
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem(key, JSON.stringify(cleaned));
+        }
+        return cleaned;
       }
     }
   } catch (e) {
@@ -366,8 +379,9 @@ export const sendDirectMessage = async (
 };
 
 export const saveDmToLocal = (key, message) => {
+  if (!key || !message || isDirectMessageDeleted(message)) return;
   try {
-    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    const existing = JSON.parse(localStorage.getItem(key) || '[]').filter((m) => !isDirectMessageDeleted(m));
     if (existing.some((m) => m.id === message.id)) {
       return;
     }
@@ -399,7 +413,7 @@ export const deleteDirectMessage = async (person, messageId) => {
   const key = getDmStorageKey(person);
   try {
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    const updated = existing.filter((m) => m.id !== messageId);
+    const updated = existing.filter((m) => m.id !== messageId && !isDirectMessageDeleted(m));
     localStorage.setItem(key, JSON.stringify(updated));
     return updated;
   } catch (e) {
@@ -478,8 +492,9 @@ export const getLatestDmSnippet = (person) => {
     if (cached) {
       const messages = JSON.parse(cached);
       if (Array.isArray(messages)) {
-        if (messages.length > 0) {
-          const last = messages[messages.length - 1];
+        const validMsgs = messages.filter((m) => !isDirectMessageDeleted(m));
+        if (validMsgs.length > 0) {
+          const last = validMsgs[validMsgs.length - 1];
           return {
             content: last.content,
             sentAt: last.sentAt,
@@ -491,7 +506,7 @@ export const getLatestDmSnippet = (person) => {
     }
   } catch (e) {}
 
-  if (person.lastMessage) {
+  if (person.lastMessage && !isDirectMessageDeleted({ content: person.lastMessage })) {
     return {
       content: person.lastMessage,
       sentAt: person.lastMessageAt || new Date().toISOString(),
@@ -501,8 +516,9 @@ export const getLatestDmSnippet = (person) => {
 
   const personName = person.name || person.username || '';
   const seedList = SEED_DM_CONVERSATIONS[personName] || [];
-  if (seedList.length > 0) {
-    const last = seedList[seedList.length - 1];
+  const validSeedList = seedList.filter((m) => !isDirectMessageDeleted(m));
+  if (validSeedList.length > 0) {
+    const last = validSeedList[validSeedList.length - 1];
     return {
       content: last.content,
       sentAt: last.sentAt,

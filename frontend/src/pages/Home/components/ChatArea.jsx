@@ -6,6 +6,7 @@ import {
   sendChannelMessage,
   deleteChannelMessage,
   canUserDeleteMessage,
+  isMessageDeleted,
   toggleMessageReaction,
   saveMessageToLocal,
   updateLocalMessagesReactions,
@@ -158,6 +159,11 @@ const ChatArea = ({
       unsubscribe = websocketService.subscribeToChannel(channelId, {
         onMessage: (incomingMsg) => {
           if (!incomingMsg) return;
+          if (incomingMsg.deleted || isMessageDeleted(incomingMsg)) {
+            setMessages((prev) => prev.filter((m) => m.id !== incomingMsg.id));
+            removeLocalMessage(clubId, channelId, incomingMsg.id);
+            return;
+          }
           const normalized = {
             id: incomingMsg.id,
             channelId: incomingMsg.channelId,
@@ -167,7 +173,7 @@ const ChatArea = ({
             content: incomingMsg.content,
             sentAt: incomingMsg.sentAt || new Date().toISOString(),
             editedAt: incomingMsg.editedAt,
-            deleted: incomingMsg.deleted,
+            deleted: false,
             reactions: incomingMsg.reactions || []
           };
 
@@ -321,16 +327,19 @@ const ChatArea = ({
 
   const handleConfirmDelete = async () => {
     if (!messageToDelete || !canDeleteMessage(messageToDelete) || isDeletingMessage) return;
+    const targetId = messageToDelete.id;
     setIsDeletingMessage(true);
+    // Optimistically remove from state immediately
+    setMessages((prev) => prev.filter((m) => m.id !== targetId));
     try {
       const updated = await deleteChannelMessage(
         club.id,
         activeChannel.id,
-        messageToDelete.id,
+        targetId,
         currentUser
       );
       if (Array.isArray(updated)) {
-        setMessages(updated);
+        setMessages(updated.filter((m) => !isMessageDeleted(m)));
       }
       setMessageToDelete(null);
     } catch (err) {
@@ -510,11 +519,12 @@ const ChatArea = ({
     }
   };
 
-  // Filter messages by search query if user typed into filter input
+  // Filter messages by search query if user typed into filter input, excluding deleted messages
   const filteredMessages = useMemo(() => {
-    if (!searchQuery.trim()) return messages;
+    const activeMsgs = messages.filter((m) => !isMessageDeleted(m));
+    if (!searchQuery.trim()) return activeMsgs;
     const query = searchQuery.toLowerCase();
-    return messages.filter(
+    return activeMsgs.filter(
       (m) =>
         m.content?.toLowerCase().includes(query) ||
         m.senderUsername?.toLowerCase().includes(query)

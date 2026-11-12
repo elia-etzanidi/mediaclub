@@ -10,6 +10,10 @@ public interface DirectMessageRepository extends JpaRepository<DirectMessage, Lo
 
     List<DirectMessage> findByConversationIdOrderBySentAtDesc(Long conversationId, Pageable pageable);
 
+    List<DirectMessage> findByConversationIdAndDeletedFalseOrderBySentAtDesc(Long conversationId, Pageable pageable);
+
     boolean existsByConversationId(Long conversationId);
+
+    boolean existsByConversationIdAndDeletedFalse(Long conversationId);
 }
 

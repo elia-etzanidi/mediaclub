@@ -189,6 +189,13 @@ const SEED_MESSAGES = {
 
 const getStorageKey = (clubId, channelId) => `mediaclub_msgs_${clubId}_${channelId}`;
 
+export const isMessageDeleted = (m) => {
+  if (!m) return true;
+  if (m.deleted === true || m.isDeleted === true) return true;
+  const content = (m.content || '').trim().toLowerCase();
+  return content === '[message deleted]' || content === '[deleted message]';
+};
+
 // Fetch messages for a channel with backend integration + local storage fallback
 export const fetchChannelMessages = async (club, channel) => {
   if (!club || !channel) return [];
@@ -208,19 +215,21 @@ export const fetchChannelMessages = async (club, channel) => {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          // Normalize reactions and sender avatar
-          const normalized = data.map((m) => ({
-            id: m.id,
-            channelId: m.channelId,
-            senderId: m.senderId,
-            senderUsername: m.senderUsername,
-            senderAvatarUrl: m.senderAvatarUrl || defaultAvatar,
-            content: m.content,
-            sentAt: m.sentAt,
-            editedAt: m.editedAt,
-            deleted: m.deleted,
-            reactions: m.reactions || []
-          }));
+          // Normalize reactions and sender avatar, filtering out any deleted messages
+          const normalized = data
+            .filter((m) => !isMessageDeleted(m))
+            .map((m) => ({
+              id: m.id,
+              channelId: m.channelId,
+              senderId: m.senderId,
+              senderUsername: m.senderUsername,
+              senderAvatarUrl: m.senderAvatarUrl || defaultAvatar,
+              content: m.content,
+              sentAt: m.sentAt,
+              editedAt: m.editedAt,
+              deleted: false,
+              reactions: m.reactions || []
+            }));
           // Save cache
           localStorage.setItem(getStorageKey(clubId, channelId), JSON.stringify(normalized));
           return normalized;
@@ -238,7 +247,11 @@ export const fetchChannelMessages = async (club, channel) => {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed)) {
-        return parsed;
+        const cleaned = parsed.filter((m) => !isMessageDeleted(m));
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem(localKey, JSON.stringify(cleaned));
+        }
+        return cleaned;
       }
     }
   } catch (e) {
@@ -322,10 +335,10 @@ export const sendChannelMessage = async (club, channel, content, currentUser) =>
 
 // Helper to save a single new message to local storage
 export const saveMessageToLocal = (clubId, channelId, message) => {
-  if (!clubId || !channelId || !message) return;
+  if (!clubId || !channelId || !message || isMessageDeleted(message)) return;
   const localKey = getStorageKey(clubId, channelId);
   try {
-    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const existing = JSON.parse(localStorage.getItem(localKey) || '[]').filter((m) => !isMessageDeleted(m));
     const exists = existing.some((m) => m.id === message.id);
     const updated = exists
       ? existing.map((m) => (m.id === message.id ? { ...m, ...message } : m))
@@ -357,7 +370,7 @@ export const removeLocalMessage = (clubId, channelId, messageId) => {
   const localKey = getStorageKey(clubId, channelId);
   try {
     const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
-    const updated = existing.filter((m) => m.id !== messageId);
+    const updated = existing.filter((m) => m.id !== messageId && !isMessageDeleted(m));
     localStorage.setItem(localKey, JSON.stringify(updated));
   } catch (e) {
     console.warn('Failed to remove message from local storage:', e);
@@ -405,11 +418,9 @@ export const deleteChannelMessage = async (clubId, channelId, messageId, current
       });
       if (!res.ok) {
         console.warn('Backend deleteChannelMessage failed with status:', res.status);
-        return null;
       }
     } catch (err) {
       console.warn('Backend deleteChannelMessage failed:', err);
-      return null;
     }
   }
 
@@ -420,9 +431,9 @@ export const deleteChannelMessage = async (clubId, channelId, messageId, current
     const targetMsg = existing.find((m) => m.id === messageId);
     if (targetMsg && currentUser && !canUserDeleteMessage(targetMsg, currentUser)) {
       console.warn("Cannot delete someone else's message");
-      return existing;
+      return existing.filter((m) => !isMessageDeleted(m));
     }
-    const updated = existing.filter((m) => m.id !== messageId);
+    const updated = existing.filter((m) => m.id !== messageId && !isMessageDeleted(m));
     localStorage.setItem(localKey, JSON.stringify(updated));
     return updated;
   } catch (e) {

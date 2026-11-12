@@ -74,10 +74,10 @@ public class DirectMessageService {
     public List<ConversationResponse> listConversations(Long userId) {
         List<Conversation> conversations = conversationRepository.findByUserAIdOrUserBId(userId, userId);
         return conversations.stream()
-                .filter(c -> directMessageRepository.existsByConversationId(c.getId()))
+                .filter(c -> directMessageRepository.existsByConversationIdAndDeletedFalse(c.getId()))
                 .map(c -> {
-                    List<DirectMessage> latest = directMessageRepository.findByConversationIdOrderBySentAtDesc(c.getId(), PageRequest.of(0, 1));
-                    String lastMsg = latest.isEmpty() ? null : (latest.get(0).isDeleted() ? "[message deleted]" : latest.get(0).getContent());
+                    List<DirectMessage> latest = directMessageRepository.findByConversationIdAndDeletedFalseOrderBySentAtDesc(c.getId(), PageRequest.of(0, 1));
+                    String lastMsg = latest.isEmpty() ? null : latest.get(0).getContent();
                     Instant lastMsgAt = latest.isEmpty() ? c.getCreatedAt() : latest.get(0).getSentAt();
                     return ConversationResponse.from(c, userId, lastMsg, lastMsgAt);
                 })
@@ -138,9 +138,10 @@ public class DirectMessageService {
         requireParticipant(conversation, requesterId);
 
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "sentAt"));
-        List<DirectMessage> messages = directMessageRepository.findByConversationIdOrderBySentAtDesc(conversationId, pageable);
+        List<DirectMessage> messages = directMessageRepository.findByConversationIdAndDeletedFalseOrderBySentAtDesc(conversationId, pageable);
 
         return messages.stream()
+                .filter(m -> !m.isDeleted())
                 .sorted(Comparator.comparing(DirectMessage::getSentAt))
                 .map(DirectMessageResponse::from)
                 .toList();
@@ -155,8 +156,7 @@ public class DirectMessageService {
             throw new ForbiddenException("You can only delete your own messages");
         }
 
-        message.setDeleted(true);
-        directMessageRepository.save(message);
+        directMessageRepository.delete(message);
     }
 
     /**

@@ -29,7 +29,7 @@ public class MessageResponse {
                 message.getSender().getId(),
                 message.getSender().getUsername(),
                 message.getSender().getAvatarUrl(),
-                message.isDeleted() ? "[message deleted]" : message.getContent(),
+                message.getContent(),
                 message.getSentAt(),
                 message.getEditedAt(),
                 message.isDeleted(),

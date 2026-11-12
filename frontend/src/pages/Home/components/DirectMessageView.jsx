@@ -5,7 +5,8 @@ import {
   fetchDirectMessages,
   sendDirectMessage,
   deleteDirectMessage,
-  toggleDirectMessageReaction
+  toggleDirectMessageReaction,
+  isDirectMessageDeleted
 } from '../../../services/directMessageService';
 import DeleteMessageModal from './DeleteMessageModal';
 import websocketService from '../../../services/websocketService';
@@ -371,13 +372,17 @@ const DirectMessageView = ({
 
   const handleConfirmDelete = async () => {
     if (!messageToDelete || !person) return;
+    const targetId = messageToDelete.id;
     setIsDeletingMessage(true);
-    const updated = await deleteDirectMessage(person, messageToDelete.id);
-    setMessages(updated);
+    // Optimistically remove from view immediately
+    setMessages((prev) => prev.filter((m) => m.id !== targetId));
+    const updated = await deleteDirectMessage(person, targetId);
+    const cleaned = Array.isArray(updated) ? updated.filter((m) => !isDirectMessageDeleted(m)) : [];
+    setMessages(cleaned);
     setIsDeletingMessage(false);
     setMessageToDelete(null);
     if (onMessageSent) {
-      const remainingLast = updated.length > 0 ? updated[updated.length - 1] : { content: '', sentAt: null };
+      const remainingLast = cleaned.length > 0 ? cleaned[cleaned.length - 1] : { content: '', sentAt: null };
       onMessageSent(person, remainingLast);
     }
   };
@@ -402,11 +407,12 @@ const DirectMessageView = ({
     return false;
   };
 
-  // Filter messages by search query
+  // Filter messages by search query, excluding deleted messages
   const filteredMessages = useMemo(() => {
-    if (!searchQuery.trim()) return messages;
+    const activeMsgs = messages.filter((m) => !isDirectMessageDeleted(m));
+    if (!searchQuery.trim()) return activeMsgs;
     const q = searchQuery.toLowerCase();
-    return messages.filter((m) => (m.content || '').toLowerCase().includes(q));
+    return activeMsgs.filter((m) => (m.content || '').toLowerCase().includes(q));
   }, [messages, searchQuery]);
 
   // Format timestamp

@@ -11,6 +11,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     // newest first - used for paginated channel history ("load more" as user scrolls up)
     List<Message> findByChannelIdOrderBySentAtDesc(Long channelId, Pageable pageable);
 
+    List<Message> findByChannelIdAndIsDeletedFalseOrderBySentAtDesc(Long channelId, Pageable pageable);
+
     void deleteByChannelId(Long channelId);
 
     void deleteByChannel_ClubId(Long clubId);

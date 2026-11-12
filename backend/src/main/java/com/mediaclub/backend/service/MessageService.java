@@ -96,10 +96,11 @@ public class MessageService {
         requireCanRead(channel, requesterId);
 
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "sentAt"));
-        List<Message> messages = messageRepository.findByChannelIdOrderBySentAtDesc(channelId, pageable);
+        List<Message> messages = messageRepository.findByChannelIdAndIsDeletedFalseOrderBySentAtDesc(channelId, pageable);
 
         // reverse so the response is oldest -> newest, like a normal chat scroll
         return messages.stream()
+                .filter(m -> !m.isDeleted())
                 .sorted(Comparator.comparing(Message::getSentAt))
                 .map(m -> MessageResponse.from(m, getReactionSummaries(m.getId())))
                 .toList();
@@ -116,10 +117,14 @@ public class MessageService {
             throw new ForbiddenException("You don't have permission to delete this message");
         }
 
-        message.setDeleted(true);
-        messageRepository.save(message);
-
         Long channelId = message.getChannel().getId();
+
+        // Delete associated reactions first to respect foreign keys
+        reactionRepository.deleteByMessageId(messageId);
+
+        // Delete the message completely so it disappears forever
+        messageRepository.delete(message);
+
         messagingTemplate.convertAndSend("/topic/channel/" + channelId + "/delete", new MessageDeletedEvent(messageId, channelId));
         return channelId;
     }
