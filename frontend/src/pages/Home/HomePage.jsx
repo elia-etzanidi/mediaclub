@@ -39,6 +39,8 @@ const getClubsKey = (uid) => `mediaclub_${uid || 'guest'}_joined_clubs`;
 const getPeopleKey = (uid) => `mediaclub_${uid || 'guest'}_direct_messages_people`;
 const getLastClubKey = (uid) => `mediaclub_${uid || 'guest'}_last_selected_club_id`;
 const getLastPersonKey = (uid) => `mediaclub_${uid || 'guest'}_last_selected_person_id`;
+const getLastTabKey = (uid) => `mediaclub_${uid || 'guest'}_last_active_tab`;
+const getTempPersonKey = (uid) => `mediaclub_${uid || 'guest'}_temporary_dm_person`;
 
 const HomePage = () => {
   const savedUser = getCurrentUser();
@@ -58,7 +60,16 @@ const HomePage = () => {
     };
   });
 
-  const [activeTab, setActiveTab] = useState('clubs');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem(getLastTabKey(initialUserId));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed === 'people' || parsed === 'clubs') return parsed;
+      }
+    } catch (e) {}
+    return 'clubs';
+  });
   const [selectedClubId, setSelectedClubId] = useState(() => {
     try {
       const saved = localStorage.getItem(getLastClubKey(initialUserId));
@@ -69,7 +80,7 @@ const HomePage = () => {
   const [selectedPersonId, setSelectedPersonId] = useState(() => {
     try {
       const saved = localStorage.getItem(getLastPersonKey(initialUserId));
-      if (saved) return JSON.parse(saved);
+      if (saved !== null && saved !== undefined) return JSON.parse(saved);
     } catch (e) {}
     return null;
   });
@@ -95,16 +106,42 @@ const HomePage = () => {
 
   // Direct message contacts state (persisted per user)
   const [people, setPeople] = useState(() => {
+    let initialList = [];
     try {
       const saved = localStorage.getItem(getPeopleKey(initialUserId));
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return sortChatsByRecency(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) initialList = parsed;
       }
     } catch (e) {
       console.warn('Error loading saved direct message people:', e);
     }
-    return token ? [] : sortChatsByRecency(initialPeople);
+    if (initialList.length === 0 && !token) {
+      initialList = [...initialPeople];
+    }
+
+    try {
+      const savedTab = localStorage.getItem(getLastTabKey(initialUserId));
+      const parsedTab = savedTab ? JSON.parse(savedTab) : null;
+      if (parsedTab === 'people') {
+        const savedTemp = localStorage.getItem(getTempPersonKey(initialUserId));
+        if (savedTemp) {
+          const tempPerson = JSON.parse(savedTemp);
+          if (tempPerson && tempPerson.id) {
+            const alreadyInList = initialList.some(
+              (p) =>
+                String(p.id) === String(tempPerson.id) ||
+                ((p.name || p.username || '').toLowerCase() === (tempPerson.name || tempPerson.username || '').toLowerCase())
+            );
+            if (!alreadyInList) {
+              initialList = [tempPerson, ...initialList];
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    return sortChatsByRecency(initialList);
   });
 
   const [isStartDmModalOpen, setIsStartDmModalOpen] = useState(false);
@@ -130,44 +167,53 @@ const HomePage = () => {
   // When returning to the clubs view, momentary chats with no chat history disappear from the left panel
   useEffect(() => {
     if (activeTab === 'clubs') {
+      try {
+        localStorage.removeItem(getTempPersonKey(user?.id || initialUserId));
+      } catch (e) {}
       setPeople((prev) => {
         const hasTemp = prev.some((p) => p.isTemporary);
         if (!hasTemp) return prev;
         const cleaned = prev.filter((p) => !p.isTemporary);
         setSelectedPersonId((currId) => {
-          const stillExists = cleaned.some((p) => p.id === currId);
+          const stillExists = cleaned.some((p) => String(p.id) === String(currId));
           return stillExists ? currId : (cleaned[0]?.id || null);
         });
         return cleaned;
       });
     }
-  }, [activeTab]);
+  }, [activeTab, user?.id, initialUserId]);
 
   useEffect(() => {
-    if (selectedClubId) {
+    if (activeTab) {
       try {
-        localStorage.setItem(getLastClubKey(user?.id), JSON.stringify(selectedClubId));
+        localStorage.setItem(getLastTabKey(user?.id || initialUserId), JSON.stringify(activeTab));
       } catch (e) {}
     }
-  }, [selectedClubId, user?.id]);
+  }, [activeTab, user?.id, initialUserId]);
 
   useEffect(() => {
-    if (selectedPersonId) {
+    if (selectedClubId !== null && selectedClubId !== undefined) {
       try {
-        localStorage.setItem(getLastPersonKey(user?.id), JSON.stringify(selectedPersonId));
+        localStorage.setItem(getLastClubKey(user?.id || initialUserId), JSON.stringify(selectedClubId));
       } catch (e) {}
     }
-  }, [selectedPersonId, user?.id]);
+  }, [selectedClubId, user?.id, initialUserId]);
+
+  useEffect(() => {
+    if (selectedPersonId !== null && selectedPersonId !== undefined) {
+      try {
+        localStorage.setItem(getLastPersonKey(user?.id || initialUserId), JSON.stringify(selectedPersonId));
+      } catch (e) {}
+    }
+  }, [selectedPersonId, user?.id, initialUserId]);
 
   // Ensure a chat is always selected when people exist
   useEffect(() => {
     if (people.length > 0) {
-      const exists = people.some((p) => p.id === selectedPersonId);
+      const exists = selectedPersonId != null && people.some((p) => String(p.id) === String(selectedPersonId));
       if (!exists) {
         setSelectedPersonId(people[0].id);
       }
-    } else {
-      setSelectedPersonId(null);
     }
   }, [people, selectedPersonId]);
 
@@ -200,7 +246,7 @@ const HomePage = () => {
         setClubs(myClubs);
         if (myClubs.length > 0) {
           setSelectedClubId((prevId) => {
-            const exists = myClubs.some((c) => c.id === prevId);
+            const exists = myClubs.some((c) => String(c.id) === String(prevId));
             return exists ? prevId : myClubs[0].id;
           });
         } else {
@@ -217,16 +263,33 @@ const HomePage = () => {
 
     fetchConversationsApi().then((convs) => {
       if (Array.isArray(convs)) {
-        const sorted = sortChatsByRecency(convs);
-        setPeople(sorted);
-        if (sorted.length > 0) {
-          setSelectedPersonId((prevId) => {
-            const exists = sorted.some((p) => p.id === prevId);
-            return exists ? prevId : sorted[0].id;
+        setPeople((prev) => {
+          const tempPerson = prev.find((p) => p.isTemporary);
+          let merged = convs.map((c) => {
+            const prevMatch = prev.find(
+              (p) => String(p.id) === String(c.id) || (p.name && c.name && p.name.toLowerCase() === c.name.toLowerCase())
+            );
+            return {
+              ...c,
+              lastMessage: prevMatch?.lastMessage || c.lastMessage,
+              lastMessageAt: prevMatch?.lastMessageAt || c.lastMessageAt
+            };
           });
-        } else {
-          setSelectedPersonId(null);
-        }
+          if (tempPerson && !merged.some((p) => String(p.id) === String(tempPerson.id))) {
+            merged.unshift(tempPerson);
+          }
+          const sorted = sortChatsByRecency(merged);
+
+          setSelectedPersonId((prevId) => {
+            if (prevId != null) {
+              const exists = sorted.some((p) => String(p.id) === String(prevId));
+              if (exists) return prevId;
+            }
+            return sorted[0]?.id || null;
+          });
+
+          return sorted;
+        });
       }
     });
 
@@ -464,7 +527,7 @@ const HomePage = () => {
   }, [activeClub?.id]);
 
   // Active person: selectedPersonId (the last chat the user had open) or first person
-  const activePerson = people.find((p) => p.id === selectedPersonId) || people[0];
+  const activePerson = people.find((p) => selectedPersonId != null && String(p.id) === String(selectedPersonId)) || people[0];
 
   // Current selected item ID for LeftPane highlighting
   const currentSelectedId = activeTab === 'clubs' ? activeClub?.id : activePerson?.id;
@@ -472,13 +535,16 @@ const HomePage = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'clubs') {
+      try {
+        localStorage.removeItem(getTempPersonKey(user?.id || initialUserId));
+      } catch (e) {}
       // When returning to the clubs view, momentary chats with no chat history disappear from the left panel
       setPeople((prev) => {
         const hasTemp = prev.some((p) => p.isTemporary);
         if (!hasTemp) return prev;
         const cleaned = prev.filter((p) => !p.isTemporary);
         setSelectedPersonId((currId) => {
-          const stillExists = cleaned.some((p) => p.id === currId);
+          const stillExists = cleaned.some((p) => String(p.id) === String(currId));
           return stillExists ? currId : (cleaned[0]?.id || null);
         });
         return cleaned;
@@ -493,7 +559,7 @@ const HomePage = () => {
     } else if (tab === 'people') {
       // The last chat the user had open will be shown!
       if (people.length > 0) {
-        const exists = people.some((p) => p.id === selectedPersonId);
+        const exists = selectedPersonId != null && people.some((p) => String(p.id) === String(selectedPersonId));
         if (!exists) {
           setSelectedPersonId(people[0].id);
         }
@@ -547,10 +613,20 @@ const HomePage = () => {
       };
     }
 
+    if (person.isTemporary) {
+      try {
+        localStorage.setItem(getTempPersonKey(user?.id || initialUserId), JSON.stringify(person));
+      } catch (e) {}
+    } else {
+      try {
+        localStorage.removeItem(getTempPersonKey(user?.id || initialUserId));
+      } catch (e) {}
+    }
+
     // Add chat to the user's chats (left panel) momentarily
     setPeople((prev) => sortChatsByRecency([
       person,
-      ...prev.filter((p) => p.id !== person.id && (p.name || '').toLowerCase() !== targetName.toLowerCase())
+      ...prev.filter((p) => String(p.id) !== String(person.id) && (p.name || '').toLowerCase() !== targetName.toLowerCase())
     ]));
     setActiveTab('people');
     setSelectedPersonId(person.id);
@@ -558,9 +634,12 @@ const HomePage = () => {
 
   const handleDmMessageSent = (person, newMsg) => {
     setDmUpdateTick((prev) => prev + 1);
+    try {
+      localStorage.removeItem(getTempPersonKey(user?.id || initialUserId));
+    } catch (e) {}
     setPeople((prev) => {
       const matchIndex = prev.findIndex(
-        (p) => p.id === person.id || (p.name && person.name && p.name.toLowerCase() === person.name.toLowerCase())
+        (p) => String(p.id) === String(person.id) || (p.name && person.name && p.name.toLowerCase() === person.name.toLowerCase())
       );
       if (matchIndex === -1) return prev;
       const updatedPerson = {

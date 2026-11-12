@@ -86,7 +86,7 @@ const LeftPane = ({
           </div>
         ) : (
           displayItems.map((item) => {
-            const isSelected = selectedItemId === item.id;
+            const isSelected = selectedItemId != null && String(selectedItemId) === String(item.id);
             const snippet = activeTab === 'people'
               ? getLatestDmSnippet(item) || (item.lastMessage ? { content: item.lastMessage } : null)
               : null;
