@@ -1,5 +1,5 @@
 import React from 'react';
-import { generateClubProfilePicture } from '../../../services/clubService';
+import { generateClubProfilePicture, findMatchingClub } from '../../../services/clubService';
 
 const SearchPopup = ({
   filter,
@@ -8,9 +8,10 @@ const SearchPopup = ({
   query = '',
   onJoinClub,
   onCreateClub,
+  joinedClubs = [],
+  systemClubs = [],
   joinedClubTitles = [],
   existingClubTitles = [],
-  systemClubs = [],
   isLoading = false
 }) => {
   const filterOptions = [
@@ -52,32 +53,27 @@ const SearchPopup = ({
         ) : results.length > 0 ? (
           <div className="search-results-list">
             {results.map((item) => {
-              const itemTitle = (item.title || item.name || '').trim().toLowerCase();
-              const isJoined = joinedClubTitles.some(
-                (t) => (t || '').trim().toLowerCase() === itemTitle
-              );
-              const matchedClub = (systemClubs || []).find((c) => {
-                if (!c) return false;
-                const cName = (c.name || '').trim().toLowerCase();
-                if (cName && cName === itemTitle) return true;
-                if (c.externalId && item.externalId && String(c.externalId).trim() === String(item.externalId).trim()) return true;
-                if ((item.isClub || item.channels) && String(c.id) === String(item.id)) return true;
-                return false;
-              });
-              const clubExists = Boolean(matchedClub) || existingClubTitles.some(
-                (t) => (t || '').trim().toLowerCase() === itemTitle
-              );
+              // 1. Check if the user has already joined the club for this specific media item
+              const joinedClub = findMatchingClub(joinedClubs, item);
+              const isJoined = Boolean(joinedClub);
+
+              // 2. Check if a club for this specific media item already exists in the system
+              const matchedClub = joinedClub || findMatchingClub(systemClubs, item);
+              const clubExists = Boolean(matchedClub);
 
               const subText = item.type === 'books'
-                ? `${item.author || 'Author'} • ${item.year || 'Book'}`
-                : `${item.genre || 'Media'} • ${item.year || ''}`;
+                ? `${item.author || 'Author'}${item.year ? ` • ${item.year}` : ''}`
+                : `${item.genre || (item.type === 'tv' ? 'TV Series' : 'Movie')}${item.year ? ` • ${item.year}` : ''}`;
 
               return (
                 <div
                   key={item.id}
                   className="search-result-item"
                   onClick={() => {
-                    if (isJoined) return;
+                    if (isJoined) {
+                      if (onJoinClub && joinedClub) onJoinClub(joinedClub);
+                      return;
+                    }
                     if (clubExists) {
                       const joinedTarget = matchedClub ? { ...item, ...matchedClub } : item;
                       if (onJoinClub) onJoinClub(joinedTarget);

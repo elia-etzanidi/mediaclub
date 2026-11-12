@@ -29,6 +29,109 @@ export const generateClubProfilePicture = (name, mediaType = 'movies') => {
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='${startColor}'/%3E%3Cstop offset='100%25' stop-color='${endColor}'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' font-weight='700' font-size='48'%3E${encodeURIComponent(letter)}%3C/text%3E%3C/svg%3E`;
 };
 
+export const normalizeMediaType = (type) => {
+  if (!type) return '';
+  const s = String(type).trim().toLowerCase();
+  if (s.includes('book')) return 'books';
+  if (s.includes('tv') || s.includes('show') || s.includes('series')) return 'tv';
+  if (s.includes('game')) return 'games';
+  if (s.includes('movie') || s.includes('film')) return 'movies';
+  return s;
+};
+
+export const normalizeExternalSource = (source, type) => {
+  if (source) {
+    const s = String(source).trim().toUpperCase();
+    if (s.includes('TMDB')) return 'TMDB';
+    if (s.includes('OPEN_LIBRARY') || s.includes('OPENLIBRARY') || s.includes('LIBRARY')) return 'OPEN_LIBRARY';
+    if (s.includes('RAWG')) return 'RAWG';
+    return s;
+  }
+  const normType = normalizeMediaType(type);
+  if (normType === 'books') return 'OPEN_LIBRARY';
+  if (normType === 'games') return 'RAWG';
+  if (normType === 'movies' || normType === 'tv') return 'TMDB';
+  return '';
+};
+
+/**
+ * Determines whether a club strictly matches a specific media search result item.
+ * Prevents clubs for different adaptations (e.g. Dune 2021 vs Dune 1984 vs Dune Book)
+ * from conflating with one another.
+ */
+export const isClubMatchForItem = (club, item) => {
+  if (!club || !item) return false;
+
+  // 1. Direct ID match if item is a club or has identical ID
+  if ((item.isClub || item.channels || item.members) && String(club.id) === String(item.id)) {
+    return true;
+  }
+  if (
+    club.id != null &&
+    item.id != null &&
+    String(club.id) === String(item.id) &&
+    !String(item.id).startsWith('tmdb-') &&
+    !String(item.id).startsWith('book-')
+  ) {
+    return true;
+  }
+
+  const clubType = normalizeMediaType(club.mediaType || club.type);
+  const itemType = normalizeMediaType(item.type || item.mediaType);
+
+  // If media types are known and different (e.g. movie vs book), they NEVER match
+  if (clubType && itemType && clubType !== itemType) {
+    return false;
+  }
+
+  // 2. Primary unique matching by externalId + externalSource
+  const clubExtId = club.externalId ? String(club.externalId).trim() : null;
+  const itemExtId = item.externalId ? String(item.externalId).trim() : null;
+
+  if (clubExtId && itemExtId) {
+    if (clubExtId === itemExtId) {
+      const clubSrc = normalizeExternalSource(club.externalSource, clubType);
+      const itemSrc = normalizeExternalSource(item.externalSource, itemType);
+      if (clubSrc && itemSrc && clubSrc !== itemSrc) {
+        return false;
+      }
+      return true;
+    }
+    // Both items have an externalId, but they are NOT equal -> definitely different titles/adaptations
+    return false;
+  }
+
+  // 3. Fallback only if at least one lacks an externalId:
+  // Names MUST match
+  const clubName = (club.name || club.title || '').trim().toLowerCase();
+  const itemName = (item.title || item.name || '').trim().toLowerCase();
+  if (!clubName || !itemName || clubName !== itemName) {
+    return false;
+  }
+
+  // Media types must match
+  if (clubType && itemType && clubType !== itemType) {
+    return false;
+  }
+
+  // If both have years, years must match (e.g. 2021 != 1984)
+  const clubYear = String(club.year || club.releaseDate || '').trim().slice(0, 4);
+  const itemYear = String(item.year || item.releaseDate || '').trim().slice(0, 4);
+  if (clubYear && itemYear && clubYear !== itemYear) {
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Finds a club from a list that uniquely matches the given media item.
+ */
+export const findMatchingClub = (clubsList, item) => {
+  if (!Array.isArray(clubsList) || !item) return null;
+  return clubsList.find((c) => isClubMatchForItem(c, item)) || null;
+};
+
 export const normalizeClub = (club) => {
   if (!club || typeof club !== 'object') return null;
 
@@ -90,6 +193,9 @@ export const normalizeClub = (club) => {
     };
   });
 
+  const rawYear = club.releaseDate || club.year || '';
+  const parsedYear = rawYear ? String(rawYear).trim().slice(0, 4) : '';
+
   return {
     id: club.id,
     name: clubName,
@@ -101,7 +207,7 @@ export const normalizeClub = (club) => {
     photo: coverUrl,
     backdrop: club.backdrop || null,
     description: club.description || '',
-    year: club.releaseDate || club.year || '',
+    year: parsedYear || (club.year || ''),
     genre: club.genre || '',
     author: club.author || '',
     channels,
@@ -353,7 +459,7 @@ export const createClubApi = async (clubData) => {
         externalSource: sourceEnum,
         externalId: String(clubData.externalId || clubData.id || Date.now()),
         coverImageUrl,
-        description: (clubData.description || clubData.plot || '').slice(0, 1900),
+        description: (clubData.description || clubData.plot || clubData.overview || '').slice(0, 1900),
         releaseDate: String(clubData.year || clubData.releaseDate || '')
       })
     });

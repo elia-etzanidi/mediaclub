@@ -24,7 +24,9 @@ import {
   leaveClubApi,
   fetchClubMembersApi,
   generateClubProfilePicture,
-  sortClubsByJoinedDate
+  sortClubsByJoinedDate,
+  findMatchingClub,
+  isClubMatchForItem
 } from '../../services/clubService';
 import {
   fetchConversationsApi,
@@ -683,22 +685,17 @@ const HomePage = () => {
     if (!item) return;
 
     try {
-      const itemName = (item.title || item.name || '').trim().toLowerCase();
-      const itemExtId = item.externalId ? String(item.externalId).trim() : null;
       const isClubObj = Boolean(item.channels || item.members || item.isClub);
 
       // Dismiss search immediately for instant UI responsiveness
       setSearchQuery('');
       setActiveTab('clubs');
 
-      // 1. Locate target club in systemClubs
+      // 1. Locate target club in systemClubs using strict media matching
       let targetClub = (systemClubs || []).find((c) => {
         if (!c) return false;
         if (isClubObj && String(c.id) === String(item.id)) return true;
-        const cName = (c.name || '').trim().toLowerCase();
-        if (cName && cName === itemName) return true;
-        if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
-        return false;
+        return isClubMatchForItem(c, item);
       });
 
       const currentToken = getToken();
@@ -711,10 +708,7 @@ const HomePage = () => {
           targetClub = freshAllClubs.find((c) => {
             if (!c) return false;
             if (isClubObj && String(c.id) === String(item.id)) return true;
-            const cName = (c.name || '').trim().toLowerCase();
-            if (cName && cName === itemName) return true;
-            if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
-            return false;
+            return isClubMatchForItem(c, item);
           });
         }
       }
@@ -744,7 +738,7 @@ const HomePage = () => {
             const freshAll = await fetchAllClubsApi();
             if (Array.isArray(freshAll)) {
               setSystemClubs(freshAll);
-              const match = freshAll.find((c) => (c.name || '').trim().toLowerCase() === itemName);
+              const match = freshAll.find((c) => isClubMatchForItem(c, item));
               if (match) {
                 await joinClubApi(match.id);
                 const freshClub = await fetchClubApi(match.id);
@@ -768,7 +762,7 @@ const HomePage = () => {
             const freshAll = await fetchAllClubsApi();
             if (Array.isArray(freshAll)) {
               setSystemClubs(freshAll);
-              const match = freshAll.find((c) => (c.name || '').trim().toLowerCase() === itemName);
+              const match = freshAll.find((c) => isClubMatchForItem(c, item));
               if (match) {
                 await joinClubApi(match.id);
                 const freshClub = await fetchClubApi(match.id);
@@ -828,15 +822,15 @@ const HomePage = () => {
         joinedAt: targetClub.joinedAt || joinedTimestamp
       };
 
-      // 3. Update systemClubs and clubs state immediately
+      // 3. Update systemClubs and clubs state immediately without removing distinct clubs
       setSystemClubs((prev) => [
-        ...prev.filter((c) => String(c.id) !== String(targetClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
+        ...prev.filter((c) => String(c.id) !== String(targetClub.id) && !isClubMatchForItem(c, targetClub)),
         targetClub
       ]);
 
       setClubs((prev) => {
         const remaining = prev.filter(
-          (c) => String(c.id) !== String(targetClub.id) && (c.name || '').trim().toLowerCase() !== itemName
+          (c) => String(c.id) !== String(targetClub.id) && !isClubMatchForItem(c, targetClub)
         );
         return sortClubsByJoinedDate([targetClub, ...remaining], user);
       });
@@ -853,7 +847,7 @@ const HomePage = () => {
           if (Array.isArray(freshClubs)) {
             setClubs((prev) => {
               const merged = [...freshClubs];
-              if (targetClub && !merged.some((c) => String(c.id) === String(targetClub.id) || (c.name || '').trim().toLowerCase() === itemName)) {
+              if (targetClub && !merged.some((c) => String(c.id) === String(targetClub.id) || isClubMatchForItem(c, targetClub))) {
                 merged.unshift(targetClub);
               }
               return sortClubsByJoinedDate(merged, user);
@@ -869,16 +863,8 @@ const HomePage = () => {
   // Trigger creation flow by prompting user with moderator explanation popup
   const handleCreateClub = (item) => {
     if (!item) return;
-    const itemName = (item.title || item.name || '').trim().toLowerCase();
-    const itemExtId = item.externalId ? String(item.externalId).trim() : null;
 
-    const existing = (systemClubs || []).find((c) => {
-      if (!c) return false;
-      const cName = (c.name || '').trim().toLowerCase();
-      if (cName && cName === itemName) return true;
-      if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
-      return false;
-    });
+    const existing = (systemClubs || []).find((c) => isClubMatchForItem(c, item));
 
     if (existing) {
       handleJoinClub(existing);
@@ -893,21 +879,12 @@ const HomePage = () => {
     if (!item) return;
 
     try {
-      const itemName = (item.title || item.name || '').trim().toLowerCase();
-      const itemExtId = item.externalId ? String(item.externalId).trim() : null;
-
       // Close modal and search immediately for instant user responsiveness
       setPendingClubToCreate(null);
       setSearchQuery('');
       setActiveTab('clubs');
 
-      const existing = (systemClubs || []).find((c) => {
-        if (!c) return false;
-        const cName = (c.name || '').trim().toLowerCase();
-        if (cName && cName === itemName) return true;
-        if (itemExtId && c.externalId && String(c.externalId).trim() === itemExtId) return true;
-        return false;
-      });
+      const existing = (systemClubs || []).find((c) => isClubMatchForItem(c, item));
 
       if (existing) {
         await handleJoinClub(existing);
@@ -949,7 +926,7 @@ const HomePage = () => {
           const freshAll = await fetchAllClubsApi();
           if (Array.isArray(freshAll) && freshAll.length > 0) {
             setSystemClubs(freshAll);
-            const match = freshAll.find((c) => (c.name || '').trim().toLowerCase() === itemName);
+            const match = freshAll.find((c) => isClubMatchForItem(c, item));
             if (match) {
               await joinClubApi(match.id);
               const freshClub = await fetchClubApi(match.id);
@@ -999,13 +976,13 @@ const HomePage = () => {
       };
 
       setSystemClubs((prev) => [
-        ...prev.filter((c) => String(c.id) !== String(newClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
+        ...prev.filter((c) => String(c.id) !== String(newClub.id) && !isClubMatchForItem(c, newClub)),
         newClub
       ]);
 
       setClubs((prev) => {
         const remaining = prev.filter(
-          (c) => String(c.id) !== String(newClub.id) && (c.name || '').trim().toLowerCase() !== itemName
+          (c) => String(c.id) !== String(newClub.id) && !isClubMatchForItem(c, newClub)
         );
         return sortClubsByJoinedDate([newClub, ...remaining], user);
       });
@@ -1021,7 +998,7 @@ const HomePage = () => {
           if (Array.isArray(freshClubs)) {
             setClubs((prev) => {
               const merged = [...freshClubs];
-              if (newClub && !merged.some((c) => String(c.id) === String(newClub.id) || (c.name || '').trim().toLowerCase() === itemName)) {
+              if (newClub && !merged.some((c) => String(c.id) === String(newClub.id) || isClubMatchForItem(c, newClub))) {
                 merged.unshift(newClub);
               }
               return sortClubsByJoinedDate(merged, user);
@@ -1123,9 +1100,10 @@ const HomePage = () => {
         isSearchHighlighted={isSearchHighlighted}
         onJoinClub={handleJoinClub}
         onCreateClub={handleCreateClub}
+        joinedClubs={clubs}
+        systemClubs={systemClubs}
         joinedClubTitles={clubs.map((c) => c.name)}
         existingClubTitles={systemClubs.map((c) => c.name)}
-        systemClubs={systemClubs}
       />
 
       {/* Main Content Area */}

@@ -12,6 +12,9 @@ export const initialClubs = [
     id: 1, 
     name: 'Inception', 
     mediaType: 'movies',
+    year: '2010',
+    externalId: '1',
+    externalSource: 'TMDB',
     img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23005a56'/%3E%3Cstop offset='100%25' stop-color='%23003836'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EI%3C/text%3E%3C/svg%3E", 
     channels: [
       { id: 'info', name: 'info', type: 'info' },
@@ -26,6 +29,9 @@ export const initialClubs = [
     id: 2, 
     name: 'Breaking Bad', 
     mediaType: 'tv',
+    year: '2008',
+    externalId: '2',
+    externalSource: 'TMDB',
     img: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233f8f8f'/%3E%3Cstop offset='100%25' stop-color='%23276060'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EB%3C/text%3E%3C/svg%3E", 
     channels: [
       { id: 'info', name: 'info', type: 'info' },
@@ -43,65 +49,92 @@ export const mockSearchResults = [
   {
     id: 1,
     type: 'movies',
+    mediaType: 'movies',
     title: 'Inception',
     genre: 'Sci-Fi / Action',
     year: '2010',
+    externalId: '1',
+    externalSource: 'TMDB',
     photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23005a56'/%3E%3Cstop offset='100%25' stop-color='%23003836'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EI%3C/text%3E%3C/svg%3E"
   },
   {
     id: 2,
     type: 'tv',
+    mediaType: 'tv',
     title: 'Breaking Bad',
     genre: 'Crime / Drama',
     year: '2008',
+    externalId: '2',
+    externalSource: 'TMDB',
     photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233f8f8f'/%3E%3Cstop offset='100%25' stop-color='%23276060'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EB%3C/text%3E%3C/svg%3E"
   },
   {
     id: 3,
     type: 'books',
+    mediaType: 'books',
     title: 'Dune',
+    author: 'Frank Herbert',
     genre: 'Sci-Fi',
     year: '1965',
+    externalId: '3',
+    externalSource: 'OPEN_LIBRARY',
     photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23f59e0b'/%3E%3Cstop offset='100%25' stop-color='%23b45309'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3ED%3C/text%3E%3C/svg%3E"
   },
   {
     id: 4,
     type: 'movies',
+    mediaType: 'movies',
     title: 'Interstellar',
     genre: 'Sci-Fi / Adventure',
     year: '2014',
+    externalId: '4',
+    externalSource: 'TMDB',
     photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23005a56'/%3E%3Cstop offset='100%25' stop-color='%23003836'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3EI%3C/text%3E%3C/svg%3E"
   },
   {
     id: 5,
     type: 'tv',
+    mediaType: 'tv',
     title: 'Stranger Things',
     genre: 'Sci-Fi / Drama',
     year: '2016',
+    externalId: '5',
+    externalSource: 'TMDB',
     photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233f8f8f'/%3E%3Cstop offset='100%25' stop-color='%23276060'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3ES%3C/text%3E%3C/svg%3E"
   },
   {
     id: 6,
     type: 'books',
+    mediaType: 'books',
     title: 'The Hobbit',
+    author: 'J.R.R. Tolkien',
     genre: 'High Fantasy',
     year: '1937',
+    externalId: '6',
+    externalSource: 'OPEN_LIBRARY',
     photo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='cg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23f59e0b'/%3E%3Cstop offset='100%25' stop-color='%23b45309'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23cg)'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23fafafa' font-family='system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif' font-weight='700' font-size='48'%3ET%3C/text%3E%3C/svg%3E"
   },
   {
     id: 7,
     type: 'movies',
+    mediaType: 'movies',
     title: 'Solaris',
     genre: 'Sci-Fi / Drama',
     year: '1972',
+    externalId: '7',
+    externalSource: 'TMDB',
     photo: null
   },
   {
     id: 8,
     type: 'books',
+    mediaType: 'books',
     title: 'Neuromancer',
+    author: 'William Gibson',
     genre: 'Cyberpunk',
     year: '1984',
+    externalId: '8',
+    externalSource: 'OPEN_LIBRARY',
     photo: null
   }
 ];

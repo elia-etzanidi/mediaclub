@@ -15,10 +15,11 @@ const TopNav = ({
   isSearchHighlighted,
   onJoinClub,
   onCreateClub,
+  joinedClubs = [],
+  systemClubs = [],
   joinedClubTitles = [],
   existingClubTitles = [],
-  joinedClubNames,
-  systemClubs = []
+  joinedClubNames
 }) => {
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const navRightRef = useRef(null);
@@ -55,10 +56,11 @@ const TopNav = ({
           isHighlighted={isSearchHighlighted}
           onJoinClub={onJoinClub}
           onCreateClub={onCreateClub}
+          joinedClubs={joinedClubs}
+          systemClubs={systemClubs}
           joinedClubTitles={joinedClubTitles}
           existingClubTitles={existingClubTitles}
           joinedClubNames={joinedClubNames}
-          systemClubs={systemClubs}
         />
       </div>
 
