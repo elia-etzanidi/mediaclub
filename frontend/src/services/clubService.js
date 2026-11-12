@@ -85,7 +85,8 @@ export const normalizeClub = (club) => {
       avatarUrl: m.avatarUrl || m.img || defaultAvatar,
       role: roleStr,
       status: isOnline ? 'Online' : 'Offline',
-      isOnline
+      isOnline,
+      joinedAt: m.joinedAt || null
     };
   });
 
@@ -106,8 +107,92 @@ export const normalizeClub = (club) => {
     channels,
     members,
     memberCount: club.memberCount || members.length || 1,
-    mediaDetails: club.mediaDetails || null
+    mediaDetails: club.mediaDetails || null,
+    createdAt: club.createdAt || null,
+    joinedAt: club.joinedAt || null
   };
+};
+
+/**
+ * Sorts clubs by joined date descending (most recently joined first to oldest last).
+ * Robustly inspects club.joinedAt, member's joinedAt for currentUser, club.createdAt, or timestamp IDs.
+ */
+export const sortClubsByJoinedDate = (clubs, currentUser) => {
+  if (!Array.isArray(clubs) || clubs.length === 0) return [];
+
+  const getJoinedTimestamp = (club) => {
+    if (!club) return 0;
+
+    // 1. Explicit joinedAt on club object (from backend ClubResponse or client join action)
+    if (club.joinedAt) {
+      const t = new Date(club.joinedAt).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+
+    // 2. Check if current user has a member entry in club.members with joinedAt
+    if (Array.isArray(club.members) && club.members.length > 0) {
+      if (currentUser) {
+        const uid = currentUser.id || currentUser.userId;
+        const uname = (currentUser.username || currentUser.name || '').trim().toLowerCase();
+
+        const myMember = club.members.find((m) => {
+          if (!m) return false;
+          const mId = m.id || m.userId;
+          if (uid != null && mId != null && String(mId) === String(uid)) return true;
+          const mName = (m.username || m.name || '').trim().toLowerCase();
+          if (uname && mName && mName === uname) return true;
+          return false;
+        });
+
+        if (myMember?.joinedAt) {
+          const t = new Date(myMember.joinedAt).getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+      }
+
+      // Check if any member has joinedAt as a fallback
+      for (const m of club.members) {
+        if (m?.joinedAt) {
+          const t = new Date(m.joinedAt).getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+      }
+    }
+
+    // 3. Fallback to createdAt if present
+    if (club.createdAt) {
+      const t = new Date(club.createdAt).getTime();
+      if (!isNaN(t) && t > 0) return t;
+    }
+
+    // 4. Fallback if id is a Date.now() timestamp (e.g. offline created club)
+    const numId = Number(club.id);
+    if (!isNaN(numId) && numId > 1600000000000) {
+      return numId;
+    }
+
+    return 0;
+  };
+
+  return [...clubs].sort((a, b) => {
+    const timeA = getJoinedTimestamp(a);
+    const timeB = getJoinedTimestamp(b);
+
+    if (timeA !== timeB) {
+      // Descending: most recently joined first, oldest last
+      return timeB - timeA;
+    }
+
+    // Secondary stable fallback: compare numeric id descending
+    const idA = Number(a?.id) || 0;
+    const idB = Number(b?.id) || 0;
+    if (idA !== idB) {
+      return idB - idA;
+    }
+
+    // Tertiary fallback: compare name
+    return String(a?.name || '').localeCompare(String(b?.name || ''));
+  });
 };
 
 export const fetchMyClubsApi = async () => {

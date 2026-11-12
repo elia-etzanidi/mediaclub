@@ -80,7 +80,7 @@ public class ClubService {
                 .build();
         founderMembership = membershipRepository.save(founderMembership);
 
-        return ClubResponse.from(club, channels, List.of(founderMembership));
+        return ClubResponse.from(club, channels, List.of(founderMembership), founderMembership.getJoinedAt());
     }
 
     public ClubResponse getClub(Long clubId) {
@@ -91,12 +91,12 @@ public class ClubService {
     }
 
     public List<ClubResponse> getMyClubs(Long userId) {
-        List<Membership> memberships = membershipRepository.findByUserId(userId);
+        List<Membership> memberships = membershipRepository.findByUserIdOrderByJoinedAtDesc(userId);
         return memberships.stream().map(m -> {
             Club club = m.getClub();
             List<Channel> channels = getOrderedChannels(club.getId());
             List<Membership> clubMemberships = membershipRepository.findByClubId(club.getId());
-            return ClubResponse.from(club, channels, clubMemberships);
+            return ClubResponse.from(club, channels, clubMemberships, m.getJoinedAt());
         }).toList();
     }
 

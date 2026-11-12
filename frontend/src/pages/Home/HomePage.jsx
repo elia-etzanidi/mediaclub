@@ -23,7 +23,8 @@ import {
   createClubApi,
   leaveClubApi,
   fetchClubMembersApi,
-  generateClubProfilePicture
+  generateClubProfilePicture,
+  sortClubsByJoinedDate
 } from '../../services/clubService';
 import {
   fetchConversationsApi,
@@ -94,7 +95,7 @@ const HomePage = () => {
       const saved = localStorage.getItem(getClubsKey(initialUserId));
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return sortClubsByJoinedDate(parsed, savedUser);
       }
     } catch (e) {
       console.warn('Error loading saved clubs:', e);
@@ -243,11 +244,12 @@ const HomePage = () => {
 
     fetchMyClubsApi().then((myClubs) => {
       if (Array.isArray(myClubs)) {
-        setClubs(myClubs);
-        if (myClubs.length > 0) {
+        const sorted = sortClubsByJoinedDate(myClubs, savedUser);
+        setClubs(sorted);
+        if (sorted.length > 0) {
           setSelectedClubId((prevId) => {
-            const exists = myClubs.some((c) => String(c.id) === String(prevId));
-            return exists ? prevId : myClubs[0].id;
+            const exists = sorted.some((c) => String(c.id) === String(prevId));
+            return exists ? prevId : sorted[0].id;
           });
         } else {
           setSelectedClubId(null);
@@ -301,7 +303,7 @@ const HomePage = () => {
 
       fetchMyClubsApi().then((freshClubs) => {
         if (Array.isArray(freshClubs)) {
-          setClubs(freshClubs);
+          setClubs(sortClubsByJoinedDate(freshClubs, user));
         }
       });
 
@@ -820,16 +822,24 @@ const HomePage = () => {
         }
       }
 
+      const joinedTimestamp = new Date().toISOString();
+      targetClub = {
+        ...targetClub,
+        joinedAt: targetClub.joinedAt || joinedTimestamp
+      };
+
       // 3. Update systemClubs and clubs state immediately
       setSystemClubs((prev) => [
         ...prev.filter((c) => String(c.id) !== String(targetClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
         targetClub
       ]);
 
-      setClubs((prev) => [
-        ...prev.filter((c) => String(c.id) !== String(targetClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
-        targetClub
-      ]);
+      setClubs((prev) => {
+        const remaining = prev.filter(
+          (c) => String(c.id) !== String(targetClub.id) && (c.name || '').trim().toLowerCase() !== itemName
+        );
+        return sortClubsByJoinedDate([targetClub, ...remaining], user);
+      });
 
       setSelectedClubId(targetClub.id);
       const infoChannel = (targetClub.channels || []).find(
@@ -844,9 +854,9 @@ const HomePage = () => {
             setClubs((prev) => {
               const merged = [...freshClubs];
               if (targetClub && !merged.some((c) => String(c.id) === String(targetClub.id) || (c.name || '').trim().toLowerCase() === itemName)) {
-                merged.push(targetClub);
+                merged.unshift(targetClub);
               }
-              return merged;
+              return sortClubsByJoinedDate(merged, user);
             });
           }
         });
@@ -949,8 +959,12 @@ const HomePage = () => {
         }
       }
 
+      const createdTimestamp = createdClub?.joinedAt || createdClub?.createdAt || new Date().toISOString();
+      currentUserMod.joinedAt = createdTimestamp;
+
       const newClub = createdClub ? {
         ...createdClub,
+        joinedAt: createdTimestamp,
         img: createdClub.img || profilePicture,
         coverImageUrl: createdClub.coverImageUrl || profilePicture,
         members: (createdClub.members && createdClub.members.length > 0)
@@ -959,6 +973,7 @@ const HomePage = () => {
       } : {
         id: Date.now(),
         name: clubName,
+        joinedAt: createdTimestamp,
         mediaType: item.type || item.mediaType || 'movies',
         externalSource: item.externalSource || (item.type === 'books' ? 'OPEN_LIBRARY' : 'TMDB'),
         externalId: item.externalId || String(item.id || Date.now()),
@@ -988,10 +1003,12 @@ const HomePage = () => {
         newClub
       ]);
 
-      setClubs((prev) => [
-        ...prev.filter((c) => String(c.id) !== String(newClub.id) && (c.name || '').trim().toLowerCase() !== itemName),
-        newClub
-      ]);
+      setClubs((prev) => {
+        const remaining = prev.filter(
+          (c) => String(c.id) !== String(newClub.id) && (c.name || '').trim().toLowerCase() !== itemName
+        );
+        return sortClubsByJoinedDate([newClub, ...remaining], user);
+      });
 
       setSelectedClubId(newClub.id);
       const infoChannel = (newClub.channels || []).find(
@@ -1005,9 +1022,9 @@ const HomePage = () => {
             setClubs((prev) => {
               const merged = [...freshClubs];
               if (newClub && !merged.some((c) => String(c.id) === String(newClub.id) || (c.name || '').trim().toLowerCase() === itemName)) {
-                merged.push(newClub);
+                merged.unshift(newClub);
               }
-              return merged;
+              return sortClubsByJoinedDate(merged, user);
             });
           }
         });
@@ -1123,6 +1140,7 @@ const HomePage = () => {
           onFocusSearch={() => handleFocusSearch()}
           onOpenStartDmModal={() => setIsStartDmModalOpen(true)}
           dmUpdateTick={dmUpdateTick}
+          currentUser={user}
         />
 
         {/* Right Component */}

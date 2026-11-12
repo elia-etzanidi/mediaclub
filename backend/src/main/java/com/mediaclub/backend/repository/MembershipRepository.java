@@ -16,6 +16,8 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
 
     List<Membership> findByUserId(Long userId);
 
+    List<Membership> findByUserIdOrderByJoinedAtDesc(Long userId);
+
     // used for the searchable member list (case-insensitive username match)
     List<Membership> findByClubIdAndUser_UsernameContainingIgnoreCase(Long clubId, String usernameQuery);
 

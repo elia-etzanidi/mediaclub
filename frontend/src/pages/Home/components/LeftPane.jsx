@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { getLatestDmSnippet, sortChatsByRecency } from '../../../services/directMessageService';
-import { generateClubProfilePicture } from '../../../services/clubService';
+import { generateClubProfilePicture, sortClubsByJoinedDate } from '../../../services/clubService';
 import defaultAvatar from '../../../assets/default-avatar.png';
 
 const LeftPane = ({
@@ -11,14 +11,18 @@ const LeftPane = ({
   onSelectItem,
   onFocusSearch,
   onOpenStartDmModal,
-  dmUpdateTick
+  dmUpdateTick,
+  currentUser
 }) => {
   const displayItems = useMemo(() => {
     if (activeTab === 'people') {
       return sortChatsByRecency(items);
     }
+    if (activeTab === 'clubs') {
+      return sortClubsByJoinedDate(items, currentUser);
+    }
     return items;
-  }, [items, activeTab, dmUpdateTick]);
+  }, [items, activeTab, dmUpdateTick, currentUser]);
 
   return (
     <aside className="left-pane">

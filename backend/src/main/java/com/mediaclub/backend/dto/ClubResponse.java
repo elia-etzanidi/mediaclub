@@ -29,6 +29,7 @@ public class ClubResponse {
     private List<ChannelResponse> channels;
     private int memberCount;
     private List<MembershipResponse> members;
+    private Instant joinedAt;
 
     public static ClubResponse from(Club club, List<Channel> channels, int memberCount) {
         return new ClubResponse(
@@ -45,11 +46,16 @@ public class ClubResponse {
                 club.getCreatedAt(),
                 channels != null ? channels.stream().map(ChannelResponse::from).toList() : List.of(),
                 memberCount,
-                List.of()
+                List.of(),
+                null
         );
     }
 
     public static ClubResponse from(Club club, List<Channel> channels, List<Membership> memberships) {
+        return from(club, channels, memberships, null);
+    }
+
+    public static ClubResponse from(Club club, List<Channel> channels, List<Membership> memberships, Instant joinedAt) {
         return new ClubResponse(
                 club.getId(),
                 club.getName(),
@@ -64,7 +70,8 @@ public class ClubResponse {
                 club.getCreatedAt(),
                 channels != null ? channels.stream().map(ChannelResponse::from).toList() : List.of(),
                 memberships != null ? memberships.size() : 0,
-                memberships != null ? memberships.stream().map(MembershipResponse::from).toList() : List.of()
+                memberships != null ? memberships.stream().map(MembershipResponse::from).toList() : List.of(),
+                joinedAt
         );
     }
 }
