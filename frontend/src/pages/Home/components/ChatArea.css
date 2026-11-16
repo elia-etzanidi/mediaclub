@@ -505,6 +505,22 @@
   background-color: #005955;
 }
 
+/* --- Inline Mention Tag --- */
+.chat-mention-tag {
+  font-weight: 700;
+  color: var(--primary-dark, #004643);
+  background-color: rgba(0, 70, 67, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.chat-mention-tag:hover {
+  background-color: rgba(0, 70, 67, 0.22);
+}
+
 /* --- Floating Message Hover Actions --- */
 .message-hover-actions {
   position: absolute;

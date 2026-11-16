@@ -585,9 +585,19 @@ const HomePage = () => {
     const unsubscribeNotifs = websocketService.subscribeToNotifications((event) => {
       if (!event) return;
 
+      const currentUsername = user?.username || savedUser?.username;
+      const isMention =
+        event.type === 'MENTION' ||
+        (event.contentPreview && /(?:^|\s)@[a-zA-Z0-9_.-]+/.test(event.contentPreview)) ||
+        (currentUsername &&
+          event.contentPreview &&
+          new RegExp(`(?<![\\w])@${currentUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`, 'i').test(
+            event.contentPreview
+          ));
+
       const newNotif = {
         id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        type: event.type, // 'DIRECT_MESSAGE' or 'CHANNEL_MESSAGE'
+        type: isMention ? 'MENTION' : event.type, // 'MENTION', 'DIRECT_MESSAGE', or 'CHANNEL_MESSAGE'
         clubId: event.clubId,
         channelId: event.channelId,
         conversationId: event.conversationId,
@@ -616,7 +626,7 @@ const HomePage = () => {
     return () => {
       unsubscribeNotifs();
     };
-  }, [user?.id, initialUserId]);
+  }, [user?.id, initialUserId, savedUser?.username, user?.username]);
 
   const handleNotificationClick = (notif) => {
     if (!notif) return;
@@ -650,13 +660,36 @@ const HomePage = () => {
           name: targetUsername
         });
       }
-    } else if (notif.type === 'CHANNEL_MESSAGE') {
-      handleTabChange('clubs');
-      if (notif.clubId) {
-        setSelectedClubId(notif.clubId);
-      }
-      if (notif.channelId) {
-        setSelectedChannelId(notif.channelId);
+    } else if (notif.type === 'CHANNEL_MESSAGE' || notif.type === 'MENTION') {
+      if (notif.clubId || notif.channelId) {
+        handleTabChange('clubs');
+        if (notif.clubId) {
+          setSelectedClubId(notif.clubId);
+        }
+        if (notif.channelId) {
+          setSelectedChannelId(notif.channelId);
+        }
+      } else if (notif.conversationId || notif.senderUsername) {
+        const targetUsername = notif.senderUsername;
+        const targetConvId = notif.conversationId;
+
+        const existingPerson = people.find(
+          (p) =>
+            (targetConvId && p.conversationId && String(p.conversationId) === String(targetConvId)) ||
+            (targetUsername && p.name && p.name.toLowerCase() === targetUsername.toLowerCase()) ||
+            (targetUsername && p.username && p.username.toLowerCase() === targetUsername.toLowerCase())
+        );
+
+        if (existingPerson) {
+          handleTabChange('people');
+          setSelectedPersonId(existingPerson.id);
+        } else if (targetUsername) {
+          handleStartDirectMessage({
+            id: targetConvId || Date.now(),
+            username: targetUsername,
+            name: targetUsername
+          });
+        }
       }
     }
   };

@@ -219,22 +219,14 @@
 
 .notifications-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  top: 1px;
+  right: 1px;
+  width: 9px;
+  height: 9px;
   background: #e5484d;
-  color: #ffffff;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 50%;
   border: 2px solid var(--primary-dark);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
-  line-height: 1;
+  box-shadow: 0 0 4px rgba(229, 72, 77, 0.5);
   pointer-events: none;
   animation: notifBadgePop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }

@@ -333,6 +333,66 @@ const DirectMessageView = ({
     }));
   };
 
+  const handleMentionClick = (mentionText) => {
+    if (!mentionText) return;
+    const cleanUsername = mentionText.replace(/^@/, '');
+    if (onOpenUserCard) {
+      if (person && cleanUsername.toLowerCase() === (person.username || person.name || '').toLowerCase()) {
+        onOpenUserCard(person);
+      } else {
+        onOpenUserCard({
+          username: cleanUsername,
+          name: cleanUsername
+        });
+      }
+    }
+  };
+
+  const renderTextWithMentions = (text, keyPrefix) => {
+    if (!text) return null;
+    const mentionRegex = /(?<![a-zA-Z0-9_])(@[a-zA-Z0-9_.-]+)(?![a-zA-Z0-9_])/g;
+    const parts = [];
+    let lastIdx = 0;
+    let match;
+    let mIdx = 0;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(text.substring(lastIdx, match.index));
+      }
+      const mentionText = match[1];
+      parts.push(
+        <span
+          key={`${keyPrefix}-m-${mIdx++}`}
+          className="dm-mention-tag"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMentionClick(mentionText);
+          }}
+          title={`View @${mentionText.replace(/^@/, '')}`}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMentionClick(mentionText);
+            }
+          }}
+        >
+          {mentionText}
+        </span>
+      );
+      lastIdx = match.index + match[0].length;
+    }
+
+    if (lastIdx < text.length) {
+      parts.push(text.substring(lastIdx));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
   // Render text with spoiler tags
   const renderMessageContent = (msg) => {
     const content = msg.content || '';
@@ -357,11 +417,11 @@ const DirectMessageView = ({
               }
             }}
           >
-            {text}
+            {renderTextWithMentions(text, `${msg.id}-${idx}`)}
           </span>
         );
       }
-      return <span key={idx}>{part}</span>;
+      return <span key={idx}>{renderTextWithMentions(part, `${msg.id}-${idx}`)}</span>;
     });
   };
 

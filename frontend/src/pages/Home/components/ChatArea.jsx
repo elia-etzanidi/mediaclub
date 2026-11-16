@@ -402,9 +402,72 @@ const ChatArea = ({
     }));
   };
 
+  const handleMentionClick = (mentionText) => {
+    if (!mentionText) return;
+    const cleanUsername = mentionText.replace(/^@/, '');
+    const foundMember = club?.members?.find(
+      (m) => (m.username || m.name || '').toLowerCase() === cleanUsername.toLowerCase()
+    );
+    if (onOpenUserCard) {
+      if (foundMember) {
+        onOpenUserCard(foundMember);
+      } else {
+        onOpenUserCard({
+          username: cleanUsername,
+          name: cleanUsername
+        });
+      }
+    }
+  };
+
   // Parse markdown spoilers (||text||), bold (**text**), italics (*text*) and links
   const renderFormattedContent = (content, msgId) => {
     if (!content) return null;
+
+    const renderTextWithMentions = (text, keyPrefix) => {
+      if (!text) return null;
+      const mentionRegex = /(?<![a-zA-Z0-9_])(@[a-zA-Z0-9_.-]+)(?![a-zA-Z0-9_])/g;
+      const parts = [];
+      let lastIdx = 0;
+      let match;
+      let mIdx = 0;
+
+      while ((match = mentionRegex.exec(text)) !== null) {
+        if (match.index > lastIdx) {
+          parts.push(text.substring(lastIdx, match.index));
+        }
+        const mentionText = match[1];
+        parts.push(
+          <span
+            key={`${keyPrefix}-m-${mIdx++}`}
+            className="chat-mention-tag"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMentionClick(mentionText);
+            }}
+            title={`View @${mentionText.replace(/^@/, '')}`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleMentionClick(mentionText);
+              }
+            }}
+          >
+            {mentionText}
+          </span>
+        );
+        lastIdx = match.index + match[0].length;
+      }
+
+      if (lastIdx < text.length) {
+        parts.push(text.substring(lastIdx));
+      }
+
+      return parts.length > 0 ? parts : text;
+    };
 
     // First split by spoiler tags: ||spoiler||
     const spoilerRegex = /\|\|(.*?)\|\|/g;
@@ -455,11 +518,11 @@ const ChatArea = ({
               }
             }}
           >
-            {part.value}
+            {renderTextWithMentions(part.value, part.key)}
           </span>
         );
       }
-      return <span key={part.key}>{part.value}</span>;
+      return <span key={part.key}>{renderTextWithMentions(part.value, part.key)}</span>;
     });
   };
 

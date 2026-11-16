@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,10 +59,17 @@ public class MessageService {
         return MessageResponse.from(message, List.of());
     }
 
+    private boolean isUserMentioned(String content, String username) {
+        if (content == null || username == null || username.isBlank()) {
+            return false;
+        }
+        Pattern pattern = Pattern.compile("(?i)(?<![\\w])@" + Pattern.quote(username.trim()) + "(?![\\w])");
+        return pattern.matcher(content).find();
+    }
+
     /**
      * Pushes a lightweight notification to every other club member who isn't muted
-     * for this channel - lets the frontend show a badge/toast even if they're not
-     * actively looking at this channel right now.
+     * for this channel (or who was specifically @mentioned, which bypasses channel mute).
      */
     private void notifyOtherMembers(Channel channel, User sender, String content) {
         Long clubId = channel.getClub().getId();
@@ -73,12 +81,22 @@ public class MessageService {
             if (memberId.equals(sender.getId())) {
                 continue; // don't notify yourself
             }
-            if (notificationPreferenceService.isChannelMuted(memberId, channel.getId(), clubId)) {
+
+            String memberUsername = member.getUser().getUsername();
+            boolean isMentioned = isUserMentioned(content, memberUsername);
+            boolean isMuted = notificationPreferenceService.isChannelMuted(memberId, channel.getId(), clubId);
+
+            // Bypasses channel mute if specifically mentioned; otherwise skip if muted
+            if (isMuted && !isMentioned) {
                 continue;
             }
 
+            NotificationEvent.NotificationType type = isMentioned
+                    ? NotificationEvent.NotificationType.MENTION
+                    : NotificationEvent.NotificationType.CHANNEL_MESSAGE;
+
             NotificationEvent event = new NotificationEvent(
-                    NotificationEvent.NotificationType.CHANNEL_MESSAGE,
+                    type,
                     clubId,
                     channel.getId(),
                     null,
@@ -87,7 +105,7 @@ public class MessageService {
                     preview,
                     Instant.now()
             );
-            messagingTemplate.convertAndSendToUser(member.getUser().getUsername(), "/queue/notifications", event);
+            messagingTemplate.convertAndSendToUser(memberUsername, "/queue/notifications", event);
         }
     }
 

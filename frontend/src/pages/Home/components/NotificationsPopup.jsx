@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './NotificationsPopup.css';
 import { formatNotificationTime } from '../../../services/notificationService';
 
@@ -10,7 +10,136 @@ const NotificationsPopup = ({
   onRemoveNotification,
   onMarkAllAsRead
 }) => {
+  const [revealedSpoilers, setRevealedSpoilers] = useState({});
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const toggleSpoiler = (key) => {
+    setRevealedSpoilers((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const renderTextWithMentions = (text, keyPrefix) => {
+    if (!text) return null;
+    const mentionRegex = /(?<![a-zA-Z0-9_])(@[a-zA-Z0-9_.-]+)(?![a-zA-Z0-9_])/g;
+    const parts = [];
+    let lastIdx = 0;
+    let match;
+    let mIdx = 0;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(text.substring(lastIdx, match.index));
+      }
+      parts.push(
+        <span key={`${keyPrefix}-m-${mIdx++}`} className="notif-mention-tag">
+          {match[1]}
+        </span>
+      );
+      lastIdx = match.index + match[0].length;
+    }
+
+    if (lastIdx < text.length) {
+      parts.push(text.substring(lastIdx));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
+  const renderNotificationPreview = (content, notifId) => {
+    if (!content) return 'Sent a new message';
+
+    const spoilerRegex = /\|\|(.*?)\|\|/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    let tokenIdx = 0;
+
+    while ((match = spoilerRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        const textSegment = content.substring(lastIndex, match.index);
+        parts.push(
+          <span key={`txt-${tokenIdx++}`}>
+            {renderTextWithMentions(textSegment, `txt-${tokenIdx}`)}
+          </span>
+        );
+      }
+      const spoilerKey = `${notifId}-${tokenIdx++}`;
+      const spoilerText = match[1];
+      const isRevealed = Boolean(revealedSpoilers[spoilerKey]);
+
+      parts.push(
+        <span
+          key={spoilerKey}
+          className={`notif-spoiler ${isRevealed ? 'revealed' : 'redacted'}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleSpoiler(spoilerKey);
+          }}
+          title={isRevealed ? 'Click to hide spoiler' : 'Spoiler! Click to reveal'}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleSpoiler(spoilerKey);
+            }
+          }}
+        >
+          {renderTextWithMentions(spoilerText, spoilerKey)}
+        </span>
+      );
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < content.length) {
+      const remaining = content.substring(lastIndex);
+      const unclosedMatch = remaining.match(/^(.*?)\|\|(.*)$/);
+      if (unclosedMatch) {
+        if (unclosedMatch[1]) {
+          parts.push(
+            <span key={`txt-${tokenIdx++}`}>
+              {renderTextWithMentions(unclosedMatch[1], `txt-${tokenIdx}`)}
+            </span>
+          );
+        }
+        const spoilerKey = `${notifId}-${tokenIdx++}`;
+        const isRevealed = Boolean(revealedSpoilers[spoilerKey]);
+        parts.push(
+          <span
+            key={spoilerKey}
+            className={`notif-spoiler ${isRevealed ? 'revealed' : 'redacted'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSpoiler(spoilerKey);
+            }}
+            title={isRevealed ? 'Click to hide spoiler' : 'Spoiler! Click to reveal'}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSpoiler(spoilerKey);
+              }
+            }}
+          >
+            {renderTextWithMentions(unclosedMatch[2], spoilerKey)}
+          </span>
+        );
+      } else {
+        parts.push(
+          <span key={`txt-${tokenIdx++}`}>
+            {renderTextWithMentions(remaining, `txt-${tokenIdx}`)}
+          </span>
+        );
+      }
+    }
+
+    return parts.length > 0 ? parts : renderTextWithMentions(content, `plain-${notifId}`);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -124,6 +253,10 @@ const NotificationsPopup = ({
       ) : (
         <div className="notifications-list" role="list">
           {notifications.map((notif) => {
+            const notifText = notif.content || notif.contentPreview || '';
+            const isMention =
+              notif.type === 'MENTION' ||
+              Boolean(notifText.match(/(?:^|\s)@[a-zA-Z0-9_.-]+/));
             const isDm = notif.type === 'DIRECT_MESSAGE';
             const isUnread = !notif.read;
 
@@ -159,8 +292,8 @@ const NotificationsPopup = ({
                       </svg>
                     </div>
                   ) : (
-                    <div className="notification-type-badge channel-badge" title="Club Channel">
-                      <span className="channel-star">✦</span>
+                    <div className="notification-type-badge channel-badge" title={isMention ? 'Mention' : 'Club Channel'}>
+                      <span className="channel-star">{isMention ? '@' : '✦'}</span>
                     </div>
                   )}
                 </div>
@@ -178,7 +311,7 @@ const NotificationsPopup = ({
                     </span>
                   </div>
                   <p className="notification-preview">
-                    {notif.content || notif.contentPreview || 'Sent a new message'}
+                    {renderNotificationPreview(notif.content || notif.contentPreview, notif.id)}
                   </p>
                 </div>
 

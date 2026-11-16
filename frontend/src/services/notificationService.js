@@ -15,7 +15,14 @@ export const loadStoredNotifications = (userId) => {
     const raw = localStorage.getItem(getNotificationsStorageKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((n) => {
+      const text = n.content || n.contentPreview || '';
+      if (n.type !== 'DIRECT_MESSAGE' && (n.type === 'MENTION' || /(?:^|\s)@[a-zA-Z0-9_.-]+/.test(text))) {
+        return { ...n, type: 'MENTION' };
+      }
+      return n;
+    });
   } catch (err) {
     console.warn('Failed to load notifications from storage:', err);
     return [];

@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -114,11 +115,19 @@ public class DirectMessageService {
         messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/dms", response);
         messagingTemplate.convertAndSendToUser(sender.getUsername(), "/queue/dms", response);
 
-        // 3. Deliver notification event if not muted
-        if (!notificationPreferenceService.isDmMuted(recipient.getId())) {
+        // 3. Deliver notification event if not muted or if specifically mentioned
+        String recipientUsername = recipient.getUsername();
+        boolean isMentioned = isUserMentioned(content, recipientUsername);
+        boolean isMuted = notificationPreferenceService.isDmMuted(recipient.getId());
+
+        if (!isMuted || isMentioned) {
             String preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+            NotificationEvent.NotificationType type = isMentioned
+                    ? NotificationEvent.NotificationType.MENTION
+                    : NotificationEvent.NotificationType.DIRECT_MESSAGE;
+
             NotificationEvent event = new NotificationEvent(
-                    NotificationEvent.NotificationType.DIRECT_MESSAGE,
+                    type,
                     null,
                     null,
                     conversationId,
@@ -127,10 +136,18 @@ public class DirectMessageService {
                     preview,
                     Instant.now()
             );
-            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications", event);
+            messagingTemplate.convertAndSendToUser(recipientUsername, "/queue/notifications", event);
         }
 
         return response;
+    }
+
+    private boolean isUserMentioned(String content, String username) {
+        if (content == null || username == null || username.isBlank()) {
+            return false;
+        }
+        Pattern pattern = Pattern.compile("(?i)(?<![\\w])@" + Pattern.quote(username.trim()) + "(?![\\w])");
+        return pattern.matcher(content).find();
     }
 
     public List<DirectMessageResponse> getHistory(Long conversationId, Long requesterId, int limit) {

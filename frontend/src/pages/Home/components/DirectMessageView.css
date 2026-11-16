@@ -358,6 +358,22 @@
   border: 1px dashed rgba(0, 70, 67, 0.3);
 }
 
+/* Mention Tag in Direct Messages */
+.dm-mention-tag {
+  font-weight: 700;
+  color: var(--primary-dark, #004643);
+  background-color: rgba(0, 70, 67, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dm-mention-tag:hover {
+  background-color: rgba(0, 70, 67, 0.22);
+}
+
 /* Reactions */
 .dm-reactions-list {
   display: flex;

@@ -167,7 +167,7 @@
 
 /* Notifications List */
 .notifications-list {
-  max-height: 380px;
+  max-height: 320px; /* Fits exactly 5 notification items (5 * 64px) */
   overflow-y: auto;
   overscroll-behavior: contain;
   background-color: var(--bg-panel, #ffffff);
@@ -182,18 +182,20 @@
 }
 
 .notifications-list::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 70, 67, 0.18);
+  background-color: rgba(0, 70, 67, 0.2);
   border-radius: 10px;
 }
 
 .notification-item {
+  height: 64px;
+  box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--border-subtle, rgba(0, 70, 67, 0.15));
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.15s ease;
   position: relative;
   text-align: left;
 }
@@ -216,7 +218,6 @@
 
 .notification-icon-col {
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .notification-type-badge {
@@ -264,7 +265,7 @@
 .notification-sender {
   font-weight: 700;
   font-size: 0.88rem;
-  color: var(--text-main, #112625);
+  color: var(--primary-dark, #004643);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -294,12 +295,47 @@
   font-size: 0.82rem;
   color: var(--text-secondary, #1a3331);
   line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  word-break: break-word;
+}
+
+/* Mention Tag in Previews */
+.notif-mention-tag {
+  font-weight: 700;
+  color: var(--primary-dark, #004643);
+  background-color: rgba(0, 70, 67, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline;
+}
+
+/* Inline Spoiler Redaction in Notification Previews */
+.notif-spoiler {
+  display: inline;
+  padding: 1px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  vertical-align: baseline;
+  margin: 0 1px;
+}
+
+.notif-spoiler.redacted {
+  background-color: var(--primary-dark, #004643);
+  color: transparent !important;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 70, 67, 0.2);
+}
+
+.notif-spoiler.redacted:hover {
+  background-color: #005a56;
+}
+
+.notif-spoiler.revealed {
+  background-color: rgba(0, 70, 67, 0.12);
+  color: var(--text-main, #112625);
+  user-select: auto;
 }
 
 .notification-actions-col {
