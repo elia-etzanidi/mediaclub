@@ -39,7 +39,8 @@ import websocketService from '../../services/websocketService';
 import defaultAvatar from '../../assets/default-avatar.png';
 import {
   loadStoredNotifications,
-  saveStoredNotifications
+  saveStoredNotifications,
+  isSpecificChatOpen
 } from '../../services/notificationService';
 
 const getClubsKey = (uid) => `mediaclub_${uid || 'guest'}_joined_clubs`;
@@ -148,6 +149,7 @@ const HomePage = () => {
   });
   const [showMembers, setShowMembers] = useState(true);
   const [dmUpdateTick, setDmUpdateTick] = useState(0);
+  const currentChatRef = useRef(null);
 
   // Clubs state: user-scoped, defaults to empty for new authenticated accounts
   const [clubs, setClubs] = useState(() => {
@@ -585,6 +587,12 @@ const HomePage = () => {
     const unsubscribeNotifs = websocketService.subscribeToNotifications((event) => {
       if (!event) return;
 
+      // When the specific chat that a notification is coming from is open,
+      // the notification shouldn't be sent to the inbox.
+      if (isSpecificChatOpen(event, currentChatRef.current)) {
+        return;
+      }
+
       const currentUsername = user?.username || savedUser?.username;
       const isMention =
         event.type === 'MENTION' ||
@@ -755,6 +763,56 @@ const HomePage = () => {
 
   // Active person: selectedPersonId (the last chat the user had open) or first person
   const activePerson = people.find((p) => selectedPersonId != null && String(p.id) === String(selectedPersonId)) || people[0];
+
+  const activeChannel =
+    activeClub?.channels?.find(
+      (c) =>
+        String(c.id) === String(selectedChannelId) ||
+        (selectedChannelId === 'info' && (c.name === 'info' || c.type === 'info'))
+    ) || activeClub?.channels?.[0];
+
+  currentChatRef.current = {
+    activeTab,
+    selectedClubId: activeClub?.id ?? selectedClubId,
+    activeClub,
+    selectedChannelId,
+    activeChannel,
+    selectedPersonId: activePerson?.id ?? selectedPersonId,
+    activePerson
+  };
+
+  // When opening or switching to a chat, mark any existing unread notifications for that specific chat as read
+  useEffect(() => {
+    const currentChat = currentChatRef.current;
+    if (!currentChat) return;
+
+    setNotifications((prev) => {
+      if (!prev.some((n) => !n.read)) return prev;
+      let changed = false;
+      const updated = prev.map((n) => {
+        if (!n.read && isSpecificChatOpen(n, currentChat)) {
+          changed = true;
+          return { ...n, read: true };
+        }
+        return n;
+      });
+      if (!changed) return prev;
+      saveStoredNotifications(user?.id || initialUserId, updated);
+      return updated;
+    });
+  }, [
+    activeTab,
+    selectedClubId,
+    selectedChannelId,
+    selectedPersonId,
+    activeClub?.id,
+    activeChannel?.id,
+    activeChannel?.name,
+    activePerson?.id,
+    activePerson?.conversationId,
+    user?.id,
+    initialUserId
+  ]);
 
   // Current selected item ID for LeftPane highlighting
   const currentSelectedId = activeTab === 'clubs' ? activeClub?.id : activePerson?.id;
