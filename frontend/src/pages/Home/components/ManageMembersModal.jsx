@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import './ManageMembersModal.css';
 import { promoteMemberApi, demoteMemberApi, kickMemberApi } from '../../../services/clubService';
+import { addModeratorPromotionNotification } from '../../../services/notificationService';
 import defaultAvatar from '../../../assets/default-avatar.png';
 
 const ManageMembersModal = ({
@@ -72,8 +73,17 @@ const ManageMembersModal = ({
       showToast(`✓ Promoted ${member.name} to Moderator!`);
     }
 
-    if (member.id && club.id) {
-      promoteMemberApi(club.id, member.id);
+    const memberId = member.id || member.userId;
+    const token = localStorage.getItem('token');
+    if (memberId && club.id && token) {
+      promoteMemberApi(club.id, memberId);
+    } else if (memberId) {
+      addModeratorPromotionNotification(
+        memberId,
+        club.name || club.title,
+        currentUser?.username || 'Moderator',
+        club.id
+      );
     }
   };
 

@@ -19,6 +19,6 @@ public class NotificationEvent {
     private Instant sentAt;
 
     public enum NotificationType {
-        CHANNEL_MESSAGE, DIRECT_MESSAGE, MENTION
+        CHANNEL_MESSAGE, DIRECT_MESSAGE, MENTION, MODERATOR_PROMOTION
     }
 }

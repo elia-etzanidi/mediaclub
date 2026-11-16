@@ -17,6 +17,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 
@@ -30,6 +31,7 @@ public class ClubService {
     private final MessageRepository messageRepository;
     private final ReactionRepository reactionRepository;
     private final NotificationPreferenceRepository notificationPreferenceRepository;
+    private final NotificationPreferenceService notificationPreferenceService;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -163,6 +165,25 @@ public class ClubService {
                 Membership newMod = remaining.get(0);
                 newMod.setRole(MembershipRole.MODERATOR);
                 membershipRepository.save(newMod);
+
+                if (!notificationPreferenceService.isSilenced(newMod.getUser().getId())) {
+                    Club club = getClubOrThrow(clubId);
+                    NotificationEvent modEvent = new NotificationEvent(
+                            NotificationEvent.NotificationType.MODERATOR_PROMOTION,
+                            clubId,
+                            null,
+                            null,
+                            club.getName(),
+                            username,
+                            "You are now a moderator of " + club.getName() + "!",
+                            Instant.now()
+                    );
+                    messagingTemplate.convertAndSendToUser(
+                            newMod.getUser().getUsername(),
+                            "/queue/notifications",
+                            modEvent
+                    );
+                }
             }
 
             messagingTemplate.convertAndSend(
@@ -225,6 +246,30 @@ public class ClubService {
                 "/topic/club/" + clubId + "/presence",
                 new PresenceEvent(clubId, targetUserId, targetMembership.getUser().getUsername(), PresenceEvent.PresenceEventType.ROLE_CHANGED, "moderator")
         );
+
+        if (!notificationPreferenceService.isSilenced(targetUserId)) {
+            String promoterName = userRepository.findById(requesterUserId)
+                    .map(User::getUsername)
+                    .orElse("A moderator");
+            String clubName = targetMembership.getClub().getName();
+
+            NotificationEvent modEvent = new NotificationEvent(
+                    NotificationEvent.NotificationType.MODERATOR_PROMOTION,
+                    clubId,
+                    null,
+                    null,
+                    clubName,
+                    promoterName,
+                    "You are now a moderator of " + clubName + "!",
+                    Instant.now()
+            );
+
+            messagingTemplate.convertAndSendToUser(
+                    targetMembership.getUser().getUsername(),
+                    "/queue/notifications",
+                    modEvent
+            );
+        }
     }
 
     @Transactional

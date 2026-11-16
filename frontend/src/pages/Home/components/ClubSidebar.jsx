@@ -4,6 +4,7 @@ import ManageMembersModal from './ManageMembersModal';
 import LeaveClubModal from './LeaveClubModal';
 import AssignModeratorModal from './AssignModeratorModal';
 import { promoteMemberApi } from '../../../services/clubService';
+import { addModeratorPromotionNotification } from '../../../services/notificationService';
 
 const ClubSidebar = ({
   club,
@@ -235,10 +236,18 @@ const ClubSidebar = ({
     if (!selectedMembers || selectedMembers.length === 0) return;
 
     // 1. Promote chosen 1-2 members to moderator
+    const token = localStorage.getItem('token');
     for (const member of selectedMembers) {
       const memberId = member.id || member.userId;
-      if (memberId && club?.id) {
+      if (memberId && club?.id && token) {
         await promoteMemberApi(club.id, memberId);
+      } else if (memberId) {
+        addModeratorPromotionNotification(
+          memberId,
+          club.name || club.title || clubName,
+          currentUser?.username || 'Moderator',
+          club.id
+        );
       }
     }
 

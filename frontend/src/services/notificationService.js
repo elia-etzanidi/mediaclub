@@ -111,13 +111,39 @@ export const loadStoredNotifications = (userId) => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((n) => {
+    const mapped = parsed.map((n) => {
+      if (n.type === 'MODERATOR_PROMOTION' || n.type === 'MODERATOR') {
+        return { ...n, type: 'MODERATOR_PROMOTION' };
+      }
       const text = n.content || n.contentPreview || '';
       if (n.type !== 'DIRECT_MESSAGE' && (n.type === 'MENTION' || /(?:^|\s)@[a-zA-Z0-9_.-]+/.test(text))) {
         return { ...n, type: 'MENTION' };
       }
       return n;
     });
+
+    const seen = [];
+    for (const item of mapped) {
+      const isDup = seen.some((s) => {
+        if (s.id && item.id && s.id === item.id) return true;
+        const isMod1 = s.type === 'MODERATOR_PROMOTION';
+        const isMod2 = item.type === 'MODERATOR_PROMOTION';
+        if (isMod1 && isMod2) {
+          const sameClub = s.clubId && item.clubId && String(s.clubId) === String(item.clubId);
+          const sameContent = s.content && item.content && s.content.trim() === item.content.trim();
+          if (sameClub || sameContent) return true;
+        }
+        return (
+          s.content === item.content &&
+          s.senderUsername === item.senderUsername &&
+          Math.abs(new Date(s.timestamp || 0).getTime() - new Date(item.timestamp || 0).getTime()) < 10000
+        );
+      });
+      if (!isDup) {
+        seen.push(item);
+      }
+    }
+    return seen;
   } catch (err) {
     console.warn('Failed to load notifications from storage:', err);
     return [];
@@ -133,6 +159,45 @@ export const saveStoredNotifications = (userId, notifications) => {
     console.warn('Failed to save notifications to storage:', err);
     return notifications;
   }
+};
+
+export const addModeratorPromotionNotification = (targetUserId, clubName, promoterUsername, clubId) => {
+  if (!targetUserId) return null;
+  if (getSilenceNotifications(targetUserId)) return null;
+
+  const newNotif = {
+    id: `notif-mod-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    type: 'MODERATOR_PROMOTION',
+    clubId: clubId || null,
+    channelId: null,
+    conversationId: null,
+    sourceName: clubName || 'Media Club',
+    senderUsername: promoterUsername || 'Moderator',
+    content: `You are now a moderator of ${clubName || 'this club'}!`,
+    timestamp: new Date().toISOString(),
+    read: false
+  };
+
+  const existing = loadStoredNotifications(targetUserId);
+  const isDuplicate = existing.some(
+    (n) =>
+      n.type === 'MODERATOR_PROMOTION' &&
+      String(n.clubId) === String(clubId) &&
+      Math.abs(new Date(n.timestamp).getTime() - new Date(newNotif.timestamp).getTime()) < 10000
+  );
+  if (isDuplicate) return null;
+
+  const updated = [newNotif, ...existing];
+  saveStoredNotifications(targetUserId, updated);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('mediaclub_notification_received', {
+        detail: { notif: newNotif, targetUserId }
+      })
+    );
+  }
+  return newNotif;
 };
 
 export const formatNotificationTime = (timestamp) => {

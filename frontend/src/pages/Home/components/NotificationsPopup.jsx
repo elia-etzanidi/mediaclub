@@ -253,10 +253,13 @@ const NotificationsPopup = ({
       ) : (
         <div className="notifications-list" role="list">
           {notifications.map((notif) => {
+            const isModPromo =
+              notif.type === 'MODERATOR_PROMOTION' || notif.type === 'MODERATOR';
             const notifText = notif.content || notif.contentPreview || '';
             const isMention =
-              notif.type === 'MENTION' ||
-              Boolean(notifText.match(/(?:^|\s)@[a-zA-Z0-9_.-]+/));
+              !isModPromo &&
+              (notif.type === 'MENTION' ||
+              Boolean(notifText.match(/(?:^|\s)@[a-zA-Z0-9_.-]+/)));
             const isDm = notif.type === 'DIRECT_MESSAGE';
             const isUnread = !notif.read;
 
@@ -273,10 +276,14 @@ const NotificationsPopup = ({
                     onNotificationClick?.(notif);
                   }
                 }}
-                aria-label={`Notification from ${notif.senderUsername || 'Member'}`}
+                aria-label={`Notification from ${notif.senderUsername || notif.sourceName || 'Member'}`}
               >
                 <div className="notification-icon-col">
-                  {isDm ? (
+                  {isModPromo ? (
+                    <div className="notification-type-badge moderator-badge" title="Moderator">
+                      <span className="notif-moderator-icon">𖤝</span>
+                    </div>
+                  ) : isDm ? (
                     <div className="notification-type-badge dm-badge" title="DM">
                       <svg
                         width="15"
@@ -301,17 +308,17 @@ const NotificationsPopup = ({
                 <div className="notification-content-col">
                   <div className="notification-meta-row">
                     <span className="notification-sender">
-                      {notif.senderUsername || 'Someone'}
+                      {isModPromo ? (notif.sourceName || 'Media Club') : (notif.senderUsername || 'Someone')}
                     </span>
                     <span className="notification-source">
-                      {isDm ? 'DM' : `✦ ${notif.sourceName || 'general'}`}
+                      {isModPromo ? '𖤝 Moderator' : (isDm ? 'DM' : `✦ ${notif.sourceName || 'general'}`)}
                     </span>
                     <span className="notification-time">
                       {formatNotificationTime(notif.timestamp)}
                     </span>
                   </div>
                   <p className="notification-preview">
-                    {renderNotificationPreview(notif.content || notif.contentPreview, notif.id)}
+                    {renderNotificationPreview(notif.content || notif.contentPreview || 'You are now a moderator!', notif.id)}
                   </p>
                 </div>
 

@@ -67,6 +67,7 @@ const ClubView = ({
           if (isMatch) {
             const onlineNow = isOnline ? true : (isOffline ? false : m.isOnline);
             const roleNow = isRoleChanged && event.role ? event.role.toLowerCase() : m.role;
+
             return {
               ...m,
               isOnline: onlineNow,

@@ -240,6 +240,23 @@
   color: var(--primary-dark, #004643);
 }
 
+.notification-type-badge.moderator-badge {
+  background: linear-gradient(135deg, rgba(0, 70, 67, 0.22), rgba(0, 70, 67, 0.1));
+  color: var(--primary-dark, #004643);
+  border: 1px solid rgba(0, 70, 67, 0.22);
+}
+
+.notif-moderator-icon {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-dark, #004643);
+  user-select: none;
+}
+
 .channel-star {
   font-size: 1.05rem;
   font-weight: 700;

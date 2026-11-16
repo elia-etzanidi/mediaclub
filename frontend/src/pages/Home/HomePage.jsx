@@ -635,6 +635,59 @@ const HomePage = () => {
     };
   }, []);
 
+  const isDuplicateNotification = (existingList, incoming) => {
+    if (!Array.isArray(existingList) || !incoming) return false;
+    return existingList.some((n) => {
+      if (n.id && incoming.id && n.id === incoming.id) return true;
+
+      const isMod1 = n.type === 'MODERATOR_PROMOTION' || n.type === 'MODERATOR';
+      const isMod2 = incoming.type === 'MODERATOR_PROMOTION' || incoming.type === 'MODERATOR';
+
+      if (isMod1 && isMod2) {
+        const sameClub = n.clubId && incoming.clubId && String(n.clubId) === String(incoming.clubId);
+        const sameContent = n.content && incoming.content && n.content.trim() === incoming.content.trim();
+        if (sameClub || sameContent) {
+          const timeDiff = Math.abs(
+            new Date(n.timestamp || 0).getTime() - new Date(incoming.timestamp || 0).getTime()
+          );
+          if (timeDiff < 60000) return true; // Within 60 seconds
+        }
+      }
+
+      const sameContent = n.content && incoming.content && n.content.trim() === incoming.content.trim();
+      const sameSender = (n.senderUsername || '').toLowerCase() === (incoming.senderUsername || '').toLowerCase();
+      const timeDiff = Math.abs(
+        new Date(n.timestamp || 0).getTime() - new Date(incoming.timestamp || 0).getTime()
+      );
+      if (sameContent && (sameSender || timeDiff < 6000)) return true;
+
+      return false;
+    });
+  };
+
+  // Listen for local notifications dispatched within app (e.g. moderator promotion)
+  useEffect(() => {
+    const handleNotifReceived = (e) => {
+      const { notif: incomingNotif, targetUserId } = e.detail || {};
+      if (!incomingNotif) return;
+      const currentUid = userRef.current?.id || userRef.current?.userId || initialUserId;
+      if (targetUserId && String(targetUserId) !== String(currentUid)) {
+        return; // Not addressed to this user
+      }
+      setNotifications((prev) => {
+        if (isDuplicateNotification(prev, incomingNotif)) return prev;
+        const updated = [incomingNotif, ...prev];
+        saveStoredNotifications(currentUid, updated);
+        return updated;
+      });
+    };
+
+    window.addEventListener('mediaclub_notification_received', handleNotifReceived);
+    return () => {
+      window.removeEventListener('mediaclub_notification_received', handleNotifReceived);
+    };
+  }, [initialUserId]);
+
   // Real-time listener for incoming user notifications (both DM and Channel)
   useEffect(() => {
     const unsubscribeNotifs = websocketService.subscribeToNotifications((event) => {
@@ -658,38 +711,35 @@ const HomePage = () => {
         return;
       }
 
+      const isModPromo = event.type === 'MODERATOR_PROMOTION' || event.type === 'MODERATOR';
       const currentUsername = activeUser?.username || savedUser?.username;
       const isMention =
-        event.type === 'MENTION' ||
+        !isModPromo &&
+        (event.type === 'MENTION' ||
         (event.contentPreview && /(?:^|\s)@[a-zA-Z0-9_.-]+/.test(event.contentPreview)) ||
         (currentUsername &&
           event.contentPreview &&
           new RegExp(`(?<![\\w])@${currentUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`, 'i').test(
             event.contentPreview
-          ));
+          )));
+
+      const notifType = isModPromo ? 'MODERATOR_PROMOTION' : (isMention ? 'MENTION' : event.type);
 
       const newNotif = {
         id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        type: isMention ? 'MENTION' : event.type, // 'MENTION', 'DIRECT_MESSAGE', or 'CHANNEL_MESSAGE'
+        type: notifType,
         clubId: event.clubId,
         channelId: event.channelId,
         conversationId: event.conversationId,
         sourceName: event.sourceName,
         senderUsername: event.senderUsername,
-        content: event.contentPreview || '',
+        content: event.contentPreview || (isModPromo ? `You are now a moderator of ${event.sourceName || 'this club'}!` : ''),
         timestamp: event.sentAt || new Date().toISOString(),
         read: false
       };
 
       setNotifications((prev) => {
-        // Prevent exact duplicates within a short time window
-        const isDuplicate = prev.some(
-          (n) =>
-            n.senderUsername === newNotif.senderUsername &&
-            n.content === newNotif.content &&
-            Math.abs(new Date(n.timestamp).getTime() - new Date(newNotif.timestamp).getTime()) < 4000
-        );
-        if (isDuplicate) return prev;
+        if (isDuplicateNotification(prev, newNotif)) return prev;
         const updated = [newNotif, ...prev];
         saveStoredNotifications(activeUser?.id || initialUserId, updated);
         return updated;
@@ -733,7 +783,7 @@ const HomePage = () => {
           name: targetUsername
         });
       }
-    } else if (notif.type === 'CHANNEL_MESSAGE' || notif.type === 'MENTION') {
+    } else if (notif.type === 'CHANNEL_MESSAGE' || notif.type === 'MENTION' || notif.type === 'MODERATOR_PROMOTION') {
       if (notif.clubId || notif.channelId) {
         handleTabChange('clubs');
         if (notif.clubId) {
