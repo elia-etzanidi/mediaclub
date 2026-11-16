@@ -37,6 +37,10 @@ import {
 } from '../../services/directMessageService';
 import websocketService from '../../services/websocketService';
 import defaultAvatar from '../../assets/default-avatar.png';
+import {
+  loadStoredNotifications,
+  saveStoredNotifications
+} from '../../services/notificationService';
 
 const getClubsKey = (uid) => `mediaclub_${uid || 'guest'}_joined_clubs`;
 const getPeopleKey = (uid) => `mediaclub_${uid || 'guest'}_direct_messages_people`;
@@ -300,6 +304,15 @@ const HomePage = () => {
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const searchInputRef = useRef(null);
   const [pendingClubToCreate, setPendingClubToCreate] = useState(null);
+
+  // User notifications
+  const [notifications, setNotifications] = useState(() => loadStoredNotifications(initialUserId));
+
+  useEffect(() => {
+    if (user?.id) {
+      setNotifications(loadStoredNotifications(user.id));
+    }
+  }, [user?.id]);
 
   // Load user data, clubs from DB, system clubs from DB, and DM conversations
   useEffect(() => {
@@ -565,6 +578,108 @@ const HomePage = () => {
 
   const handleUpdateUser = (updatedFields) => {
     setUser((prev) => ({ ...prev, ...updatedFields }));
+  };
+
+  // Real-time listener for incoming user notifications (both DM and Channel)
+  useEffect(() => {
+    const unsubscribeNotifs = websocketService.subscribeToNotifications((event) => {
+      if (!event) return;
+
+      const newNotif = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        type: event.type, // 'DIRECT_MESSAGE' or 'CHANNEL_MESSAGE'
+        clubId: event.clubId,
+        channelId: event.channelId,
+        conversationId: event.conversationId,
+        sourceName: event.sourceName,
+        senderUsername: event.senderUsername,
+        content: event.contentPreview || '',
+        timestamp: event.sentAt || new Date().toISOString(),
+        read: false
+      };
+
+      setNotifications((prev) => {
+        // Prevent exact duplicates within a short time window
+        const isDuplicate = prev.some(
+          (n) =>
+            n.senderUsername === newNotif.senderUsername &&
+            n.content === newNotif.content &&
+            Math.abs(new Date(n.timestamp).getTime() - new Date(newNotif.timestamp).getTime()) < 4000
+        );
+        if (isDuplicate) return prev;
+        const updated = [newNotif, ...prev];
+        saveStoredNotifications(user?.id || initialUserId, updated);
+        return updated;
+      });
+    });
+
+    return () => {
+      unsubscribeNotifs();
+    };
+  }, [user?.id, initialUserId]);
+
+  const handleNotificationClick = (notif) => {
+    if (!notif) return;
+
+    // 1. Mark as read
+    setNotifications((prev) => {
+      const updated = prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n));
+      saveStoredNotifications(user?.id || initialUserId, updated);
+      return updated;
+    });
+
+    // 2. Navigate
+    if (notif.type === 'DIRECT_MESSAGE') {
+      const targetUsername = notif.senderUsername;
+      const targetConvId = notif.conversationId;
+
+      const existingPerson = people.find(
+        (p) =>
+          (targetConvId && p.conversationId && String(p.conversationId) === String(targetConvId)) ||
+          (targetUsername && p.name && p.name.toLowerCase() === targetUsername.toLowerCase()) ||
+          (targetUsername && p.username && p.username.toLowerCase() === targetUsername.toLowerCase())
+      );
+
+      if (existingPerson) {
+        handleTabChange('people');
+        setSelectedPersonId(existingPerson.id);
+      } else if (targetUsername) {
+        handleStartDirectMessage({
+          id: targetConvId || Date.now(),
+          username: targetUsername,
+          name: targetUsername
+        });
+      }
+    } else if (notif.type === 'CHANNEL_MESSAGE') {
+      handleTabChange('clubs');
+      if (notif.clubId) {
+        setSelectedClubId(notif.clubId);
+      }
+      if (notif.channelId) {
+        setSelectedChannelId(notif.channelId);
+      }
+    }
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+    saveStoredNotifications(user?.id || initialUserId, []);
+  };
+
+  const handleRemoveNotification = (notifId) => {
+    setNotifications((prev) => {
+      const updated = prev.filter((n) => n.id !== notifId);
+      saveStoredNotifications(user?.id || initialUserId, updated);
+      return updated;
+    });
+  };
+
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      saveStoredNotifications(user?.id || initialUserId, updated);
+      return updated;
+    });
   };
 
   // Active club: selectedClubId if found in clubs, else first club
@@ -1243,6 +1358,11 @@ const HomePage = () => {
         systemClubs={systemClubs}
         joinedClubTitles={clubs.map((c) => c.name)}
         existingClubTitles={systemClubs.map((c) => c.name)}
+        notifications={notifications}
+        onNotificationClick={handleNotificationClick}
+        onClearAllNotifications={handleClearAllNotifications}
+        onRemoveNotification={handleRemoveNotification}
+        onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
       />
 
       {/* Main Content Area */}

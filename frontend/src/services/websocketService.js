@@ -13,6 +13,7 @@ class WebSocketService {
     this.channelSubscriptions = new Map(); // channelId -> Set of callback objects { onMessage, onReaction, onDelete, onTyping }
     this.clubPresenceSubscriptions = new Map(); // clubId -> Set of callbacks (presenceEvent) => void
     this.dmListeners = new Set(); // Set of callbacks (dmData) => void
+    this.notificationListeners = new Set(); // Set of callbacks (notifEvent) => void
     this.dmConversationSubscriptions = new Map(); // convId -> Set of callback objects { onMessage, onTyping }
     this.stompSubscriptions = new Map(); // key -> stompSubscription
     this.pendingConnect = null;
@@ -93,6 +94,7 @@ class WebSocketService {
       this.channelSubscriptions.clear();
       this.clubPresenceSubscriptions.clear();
       this.dmListeners.clear();
+      this.notificationListeners.clear();
       this.dmConversationSubscriptions.clear();
       this.stompSubscriptions.clear();
       this.pendingConnect = null;
@@ -240,7 +242,7 @@ class WebSocketService {
     for (const clubId of this.clubPresenceSubscriptions.keys()) {
       this.setupClubPresenceSubscription(clubId);
     }
-    if (this.dmListeners.size > 0) {
+    if (this.dmListeners.size > 0 || this.notificationListeners.size > 0) {
       this.setupDmSubscription();
       this.setupNotificationSubscription();
     }
@@ -412,6 +414,21 @@ class WebSocketService {
     }
   }
 
+  subscribeToNotifications(callback) {
+    if (typeof callback !== 'function') return () => {};
+    this.notificationListeners.add(callback);
+
+    if (this.connected && this.client) {
+      this.setupNotificationSubscription();
+    } else {
+      this.connect();
+    }
+
+    return () => {
+      this.notificationListeners.delete(callback);
+    };
+  }
+
   setupNotificationSubscription() {
     if (!this.client || !this.connected) return;
     const key = 'user_notifications';
@@ -420,6 +437,16 @@ class WebSocketService {
         const sub = this.client.subscribe('/user/queue/notifications', (frame) => {
           try {
             const notif = JSON.parse(frame.body);
+            // Broadcast to all notification subscribers
+            this.notificationListeners.forEach((cb) => {
+              try {
+                cb(notif);
+              } catch (e) {
+                console.error('Error running notification callback:', e);
+              }
+            });
+
+            // Backward compatibility for legacy dmListeners
             if (notif.type === 'DIRECT_MESSAGE') {
               this.dmListeners.forEach((cb) => {
                 try {

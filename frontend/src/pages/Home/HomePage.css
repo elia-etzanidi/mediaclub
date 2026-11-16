@@ -40,6 +40,7 @@
   align-items: center;
   justify-content: flex-end;
   flex: 1;
+  gap: 12px;
 }
 
 .app-name {
@@ -168,6 +169,85 @@
 .profile-pic:hover {
   transform: scale(1.04);
   border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- Notifications Envelope Icon & Badge --- */
+.notifications-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notifications-envelope-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: var(--text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  padding: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  outline: none;
+}
+
+.notifications-envelope-btn:hover {
+  transform: scale(1.05);
+  background-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.notifications-envelope-btn.active {
+  background-color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.65);
+  transform: scale(1.02);
+}
+
+.notifications-envelope-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.notifications-envelope-svg {
+  display: block;
+  color: #ffffff;
+}
+
+.notifications-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e5484d;
+  color: #ffffff;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--primary-dark);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  line-height: 1;
+  pointer-events: none;
+  animation: notifBadgePop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes notifBadgePop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* --- Main Content Split --- */
