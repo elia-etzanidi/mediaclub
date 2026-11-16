@@ -639,9 +639,9 @@ const HomePage = () => {
   const handleNotificationClick = (notif) => {
     if (!notif) return;
 
-    // 1. Mark as read
+    // 1. Auto-read and remove from inbox
     setNotifications((prev) => {
-      const updated = prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n));
+      const updated = prev.filter((n) => n.id !== notif.id);
       saveStoredNotifications(user?.id || initialUserId, updated);
       return updated;
     });
@@ -781,22 +781,15 @@ const HomePage = () => {
     activePerson
   };
 
-  // When opening or switching to a chat, mark any existing unread notifications for that specific chat as read
+  // When opening or switching to a chat, auto-read and remove notifications for that specific chat from the inbox
   useEffect(() => {
     const currentChat = currentChatRef.current;
     if (!currentChat) return;
 
     setNotifications((prev) => {
-      if (!prev.some((n) => !n.read)) return prev;
-      let changed = false;
-      const updated = prev.map((n) => {
-        if (!n.read && isSpecificChatOpen(n, currentChat)) {
-          changed = true;
-          return { ...n, read: true };
-        }
-        return n;
-      });
-      if (!changed) return prev;
+      if (prev.length === 0) return prev;
+      const updated = prev.filter((n) => !isSpecificChatOpen(n, currentChat));
+      if (updated.length === prev.length) return prev;
       saveStoredNotifications(user?.id || initialUserId, updated);
       return updated;
     });
