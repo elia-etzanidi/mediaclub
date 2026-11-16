@@ -13,6 +13,7 @@ import {
   removeLocalMessage
 } from '../../../services/messageService';
 import { websocketService } from '../../../services/websocketService';
+import { resolveUserAccount } from '../../../services/userService';
 import DeleteMessageModal from './DeleteMessageModal';
 
 // Standard topic hints by channel name
@@ -402,21 +403,20 @@ const ChatArea = ({
     }));
   };
 
-  const handleMentionClick = (mentionText) => {
+  const handleMentionClick = async (mentionText) => {
     if (!mentionText) return;
-    const cleanUsername = mentionText.replace(/^@/, '');
-    const foundMember = club?.members?.find(
-      (m) => (m.username || m.name || '').toLowerCase() === cleanUsername.toLowerCase()
-    );
-    if (onOpenUserCard) {
-      if (foundMember) {
-        onOpenUserCard(foundMember);
-      } else {
-        onOpenUserCard({
-          username: cleanUsername,
-          name: cleanUsername
-        });
+    const cleanUsername = mentionText.replace(/^@/, '').trim();
+    if (!cleanUsername) return;
+
+    try {
+      const targetUser = await resolveUserAccount(cleanUsername, club, currentUser);
+      if (!targetUser) {
+        // Account does not exist. Clicking it should do nothing.
+        return;
       }
+      onOpenUserCard?.(targetUser);
+    } catch (err) {
+      // Account does not exist or lookup error - do nothing
     }
   };
 

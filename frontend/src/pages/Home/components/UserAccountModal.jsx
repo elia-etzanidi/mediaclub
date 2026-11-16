@@ -32,6 +32,12 @@ const UserAccountModal = ({
     fetchUserAccountDetails(user, club, currentUser)
       .then((data) => {
         if (isMounted) {
+          if (!data) {
+            setProfile(null);
+            setIsLoading(false);
+            onClose?.();
+            return;
+          }
           setProfile(data);
           setIsLoading(false);
         }
@@ -39,7 +45,9 @@ const UserAccountModal = ({
       .catch((err) => {
         console.warn('Failed to load user account details:', err);
         if (isMounted) {
+          setProfile(null);
           setIsLoading(false);
+          onClose?.();
         }
       });
 
@@ -90,7 +98,7 @@ const UserAccountModal = ({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || (!profile && !isLoading)) return null;
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {

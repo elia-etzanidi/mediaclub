@@ -10,6 +10,7 @@ import {
 } from '../../../services/directMessageService';
 import DeleteMessageModal from './DeleteMessageModal';
 import websocketService from '../../../services/websocketService';
+import { resolveUserAccount } from '../../../services/userService';
 
 const QUICK_EMOJIS = ['❤️', '👍', '🔥', '🍿', '😮', '😂'];
 const PICKER_EMOJIS = [
@@ -333,18 +334,26 @@ const DirectMessageView = ({
     }));
   };
 
-  const handleMentionClick = (mentionText) => {
+  const handleMentionClick = async (mentionText) => {
     if (!mentionText) return;
-    const cleanUsername = mentionText.replace(/^@/, '');
-    if (onOpenUserCard) {
+    const cleanUsername = mentionText.replace(/^@/, '').trim();
+    if (!cleanUsername) return;
+
+    try {
+      let targetUser = null;
       if (person && cleanUsername.toLowerCase() === (person.username || person.name || '').toLowerCase()) {
-        onOpenUserCard(person);
+        targetUser = person;
       } else {
-        onOpenUserCard({
-          username: cleanUsername,
-          name: cleanUsername
-        });
+        targetUser = await resolveUserAccount(cleanUsername, null, currentUser);
       }
+
+      if (!targetUser) {
+        // Account does not exist. Clicking it should do nothing.
+        return;
+      }
+      onOpenUserCard?.(targetUser);
+    } catch (err) {
+      // Account does not exist or lookup error - do nothing
     }
   };
 
