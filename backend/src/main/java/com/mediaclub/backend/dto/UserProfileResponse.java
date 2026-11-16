@@ -17,6 +17,7 @@ public class UserProfileResponse {
     private Instant createdAt;
     private User.UserStatus status;
     private Instant lastSeen;
+    private boolean notificationsSilenced;
 
     public static UserProfileResponse from(User user) {
         return new UserProfileResponse(
@@ -26,7 +27,8 @@ public class UserProfileResponse {
                 user.getAvatarUrl(),
                 user.getCreatedAt(),
                 user.getStatus(),
-                user.getLastSeen()
+                user.getLastSeen(),
+                user.isNotificationsSilenced()
         );
     }
 }

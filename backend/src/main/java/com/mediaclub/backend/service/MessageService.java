@@ -82,6 +82,11 @@ public class MessageService {
                 continue; // don't notify yourself
             }
 
+            // Don't notify if member has silenced all notifications
+            if (notificationPreferenceService.isSilenced(memberId)) {
+                continue;
+            }
+
             String memberUsername = member.getUser().getUsername();
             boolean isMentioned = isUserMentioned(content, memberUsername);
             boolean isMuted = notificationPreferenceService.isChannelMuted(memberId, channel.getId(), clubId);

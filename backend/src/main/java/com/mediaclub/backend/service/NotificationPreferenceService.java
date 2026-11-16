@@ -35,7 +35,22 @@ public class NotificationPreferenceService {
                 .map(NotificationPreferenceResponse::from)
                 .toList();
 
-        return new NotificationSettingsResponse(user.isDmNotificationsMuted(), preferences);
+        return new NotificationSettingsResponse(user.isDmNotificationsMuted(), user.isNotificationsSilenced(), preferences);
+    }
+
+    @Transactional
+    public void setSilenceNotifications(Long userId, boolean silenced) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setNotificationsSilenced(silenced);
+        userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isSilenced(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::isNotificationsSilenced)
+                .orElse(false);
     }
 
     @Transactional

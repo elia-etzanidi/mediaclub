@@ -115,12 +115,13 @@ public class DirectMessageService {
         messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/dms", response);
         messagingTemplate.convertAndSendToUser(sender.getUsername(), "/queue/dms", response);
 
-        // 3. Deliver notification event if not muted or if specifically mentioned
+        // 3. Deliver notification event if not silenced, and not muted (unless specifically mentioned)
+        boolean isSilenced = notificationPreferenceService.isSilenced(recipient.getId());
         String recipientUsername = recipient.getUsername();
         boolean isMentioned = isUserMentioned(content, recipientUsername);
         boolean isMuted = notificationPreferenceService.isDmMuted(recipient.getId());
 
-        if (!isMuted || isMentioned) {
+        if (!isSilenced && (!isMuted || isMentioned)) {
             String preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
             NotificationEvent.NotificationType type = isMentioned
                     ? NotificationEvent.NotificationType.MENTION

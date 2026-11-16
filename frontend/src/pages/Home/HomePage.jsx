@@ -40,7 +40,10 @@ import defaultAvatar from '../../assets/default-avatar.png';
 import {
   loadStoredNotifications,
   saveStoredNotifications,
-  isSpecificChatOpen
+  isSpecificChatOpen,
+  getSilenceNotifications,
+  setSilenceNotifications,
+  fetchSilenceNotificationsApi
 } from '../../services/notificationService';
 
 const getClubsKey = (uid) => `mediaclub_${uid || 'guest'}_joined_clubs`;
@@ -150,6 +153,7 @@ const HomePage = () => {
   const [showMembers, setShowMembers] = useState(true);
   const [dmUpdateTick, setDmUpdateTick] = useState(0);
   const currentChatRef = useRef(null);
+  const userRef = useRef(user);
 
   // Clubs state: user-scoped, defaults to empty for new authenticated accounts
   const [clubs, setClubs] = useState(() => {
@@ -579,13 +583,74 @@ const HomePage = () => {
   }, [user?.id]);
 
   const handleUpdateUser = (updatedFields) => {
-    setUser((prev) => ({ ...prev, ...updatedFields }));
+    setUser((prev) => {
+      const updated = { ...prev, ...updatedFields };
+      userRef.current = updated;
+      try {
+        const savedUserStr = localStorage.getItem('user');
+        if (savedUserStr) {
+          const parsed = JSON.parse(savedUserStr);
+          localStorage.setItem('user', JSON.stringify({ ...parsed, ...updatedFields }));
+        }
+      } catch (e) {}
+      return updated;
+    });
   };
+
+  // Sync silence preferences on mount from backend
+  useEffect(() => {
+    const syncBackendSilence = async () => {
+      const serverSilenced = await fetchSilenceNotificationsApi();
+      if (serverSilenced !== null) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const updated = { ...prev, notificationsSilenced: serverSilenced };
+          userRef.current = updated;
+          return updated;
+        });
+        setSilenceNotifications(user?.id || initialUserId, serverSilenced);
+      }
+    };
+    syncBackendSilence();
+  }, [user?.id, initialUserId]);
+
+  // Listen for immediate silence changes across components without reload
+  useEffect(() => {
+    const handleSilenceChange = (e) => {
+      const { silenced } = e.detail || {};
+      if (silenced !== undefined) {
+        const boolSilenced = Boolean(silenced);
+        setUser((prev) => {
+          if (!prev) return prev;
+          const updated = { ...prev, notificationsSilenced: boolSilenced };
+          userRef.current = updated;
+          return updated;
+        });
+      }
+    };
+
+    window.addEventListener('mediaclub_silence_changed', handleSilenceChange);
+    return () => {
+      window.removeEventListener('mediaclub_silence_changed', handleSilenceChange);
+    };
+  }, []);
 
   // Real-time listener for incoming user notifications (both DM and Channel)
   useEffect(() => {
     const unsubscribeNotifs = websocketService.subscribeToNotifications((event) => {
       if (!event) return;
+
+      const activeUser = userRef.current || user;
+      const uid = activeUser?.id || activeUser?.userId || initialUserId;
+
+      // When notifications are silenced, do not send to inbox
+      const isSilenced =
+        activeUser?.notificationsSilenced !== undefined && activeUser?.notificationsSilenced !== null
+          ? Boolean(activeUser.notificationsSilenced)
+          : getSilenceNotifications(uid);
+      if (isSilenced) {
+        return;
+      }
 
       // When the specific chat that a notification is coming from is open,
       // the notification shouldn't be sent to the inbox.
@@ -593,7 +658,7 @@ const HomePage = () => {
         return;
       }
 
-      const currentUsername = user?.username || savedUser?.username;
+      const currentUsername = activeUser?.username || savedUser?.username;
       const isMention =
         event.type === 'MENTION' ||
         (event.contentPreview && /(?:^|\s)@[a-zA-Z0-9_.-]+/.test(event.contentPreview)) ||
@@ -626,7 +691,7 @@ const HomePage = () => {
         );
         if (isDuplicate) return prev;
         const updated = [newNotif, ...prev];
-        saveStoredNotifications(user?.id || initialUserId, updated);
+        saveStoredNotifications(activeUser?.id || initialUserId, updated);
         return updated;
       });
     });
@@ -770,6 +835,8 @@ const HomePage = () => {
         String(c.id) === String(selectedChannelId) ||
         (selectedChannelId === 'info' && (c.name === 'info' || c.type === 'info'))
     ) || activeClub?.channels?.[0];
+
+  userRef.current = user;
 
   currentChatRef.current = {
     activeTab,

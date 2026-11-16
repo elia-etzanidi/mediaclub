@@ -9,5 +9,6 @@ import java.util.List;
 @AllArgsConstructor
 public class NotificationSettingsResponse {
     private boolean dmNotificationsMuted;
+    private boolean notificationsSilenced;
     private List<NotificationPreferenceResponse> preferences;
 }

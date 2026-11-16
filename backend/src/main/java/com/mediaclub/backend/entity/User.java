@@ -51,6 +51,10 @@ public class User {
     @Builder.Default
     private boolean dmNotificationsMuted = false;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean notificationsSilenced = false;
+
     private Instant lastSeen;
 
     @Column(nullable = false, updatable = false)

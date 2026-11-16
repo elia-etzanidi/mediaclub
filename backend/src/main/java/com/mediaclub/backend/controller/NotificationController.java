@@ -4,6 +4,7 @@ import com.mediaclub.backend.dto.NotificationSettingsResponse;
 import com.mediaclub.backend.dto.SetChannelMuteRequest;
 import com.mediaclub.backend.dto.SetClubMuteRequest;
 import com.mediaclub.backend.dto.SetDmMuteRequest;
+import com.mediaclub.backend.dto.SetSilenceRequest;
 import com.mediaclub.backend.security.CurrentUserProvider;
 import com.mediaclub.backend.service.NotificationPreferenceService;
 import jakarta.validation.Valid;
@@ -43,6 +44,13 @@ public class NotificationController {
     public ResponseEntity<Void> setDmMute(@Valid @RequestBody SetDmMuteRequest request) {
         Long userId = currentUserProvider.getCurrentUserId();
         notificationPreferenceService.setDmMute(userId, request.isMuted());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/preferences/silence")
+    public ResponseEntity<Void> setSilenceNotifications(@Valid @RequestBody SetSilenceRequest request) {
+        Long userId = currentUserProvider.getCurrentUserId();
+        notificationPreferenceService.setSilenceNotifications(userId, request.isSilenced());
         return ResponseEntity.noContent().build();
     }
 }

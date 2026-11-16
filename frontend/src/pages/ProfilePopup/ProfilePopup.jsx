@@ -2,15 +2,58 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ProfilePopup.css';
 import { logoutUser, updateUserAvatar } from '../../services/authService';
+import {
+  getSilenceNotifications,
+  setSilenceNotifications,
+  updateSilenceNotificationsApi
+} from '../../services/notificationService';
 import defaultAvatar from '../../assets/default-avatar.png';
 
 const ProfilePopup = ({ user, onUpdateUser, onClose }) => {
-  const [silenceNotifs, setSilenceNotifs] = useState(false);
+  const effectiveUserId = user?.id || user?.userId;
+
+  const [silenceNotifs, setSilenceNotifs] = useState(() => {
+    if (user?.notificationsSilenced !== undefined && user?.notificationsSilenced !== null) {
+      return Boolean(user.notificationsSilenced);
+    }
+    return getSilenceNotifications(effectiveUserId);
+  });
   const [isUpdating, setIsUpdating] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  // Sync state if user prop changes
+  React.useEffect(() => {
+    if (user?.notificationsSilenced !== undefined && user?.notificationsSilenced !== null) {
+      setSilenceNotifs(Boolean(user.notificationsSilenced));
+    }
+  }, [user?.notificationsSilenced]);
+
+  // Sync state if silence changed anywhere in the app
+  React.useEffect(() => {
+    const handleSilenceChanged = (e) => {
+      if (e.detail?.silenced !== undefined) {
+        setSilenceNotifs(Boolean(e.detail.silenced));
+      }
+    };
+    window.addEventListener('mediaclub_silence_changed', handleSilenceChanged);
+    return () => window.removeEventListener('mediaclub_silence_changed', handleSilenceChanged);
+  }, []);
+
+  const handleToggleSilence = async () => {
+    const nextVal = !silenceNotifs;
+    setSilenceNotifs(nextVal);
+    setSilenceNotifications(effectiveUserId, nextVal);
+    onUpdateUser?.({ notificationsSilenced: nextVal });
+
+    try {
+      await updateSilenceNotificationsApi(nextVal);
+    } catch (e) {
+      // ignore
+    }
+  };
 
   const currentPfp = user?.pfp || user?.avatarUrl || defaultAvatar;
 
@@ -203,11 +246,12 @@ const ProfilePopup = ({ user, onUpdateUser, onClose }) => {
 
         <div className="popup-action">
           <span className="action-label">Silence Notifications</span>
-          <label className="switch">
+          <label className="switch" title={silenceNotifs ? 'Unmute all notifications' : 'Silence all notifications'}>
             <input
               type="checkbox"
               checked={silenceNotifs}
-              onChange={() => setSilenceNotifs(!silenceNotifs)}
+              onChange={handleToggleSilence}
+              aria-label="Silence notifications"
             />
             <span className="slider round"></span>
           </label>

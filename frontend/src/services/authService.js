@@ -155,6 +155,7 @@ export const getUserProfile = async () => {
         avatarUrl: data.avatarUrl || '/default-avatar.png',
         pfp: data.avatarUrl || '/default-avatar.png',
         createdAt: data.createdAt,
+        notificationsSilenced: data.notificationsSilenced !== undefined ? Boolean(data.notificationsSilenced) : undefined
       });
     }
   } catch (err) {

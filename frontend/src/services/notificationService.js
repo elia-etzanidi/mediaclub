@@ -4,10 +4,105 @@
  */
 
 const NOTIFICATION_KEY_PREFIX = 'mediaclub_notifications_';
+const SILENCE_NOTIFS_KEY_PREFIX = 'mediaclub_silence_notifications_';
 const MAX_NOTIFICATIONS = 50;
 
 export const getNotificationsStorageKey = (userId) => {
   return `${NOTIFICATION_KEY_PREFIX}${userId || 'guest'}`;
+};
+
+export const getSilenceNotifications = (userId) => {
+  try {
+    if (userId) {
+      const specific = localStorage.getItem(`${SILENCE_NOTIFS_KEY_PREFIX}${userId}`);
+      if (specific !== null) return specific === 'true';
+    }
+
+    const savedUserStr = localStorage.getItem('user');
+    if (savedUserStr) {
+      const parsed = JSON.parse(savedUserStr);
+      if (parsed?.notificationsSilenced !== undefined && parsed?.notificationsSilenced !== null) {
+        return Boolean(parsed.notificationsSilenced);
+      }
+    }
+
+    const fallback = localStorage.getItem(`${SILENCE_NOTIFS_KEY_PREFIX}guest`);
+    return fallback === 'true';
+  } catch {
+    return false;
+  }
+};
+
+export const setSilenceNotifications = (userId, silenced) => {
+  const boolVal = Boolean(silenced);
+  try {
+    if (userId) {
+      localStorage.setItem(`${SILENCE_NOTIFS_KEY_PREFIX}${userId}`, String(boolVal));
+    }
+    localStorage.setItem(`${SILENCE_NOTIFS_KEY_PREFIX}guest`, String(boolVal));
+
+    const savedUserStr = localStorage.getItem('user');
+    if (savedUserStr) {
+      try {
+        const parsed = JSON.parse(savedUserStr);
+        parsed.notificationsSilenced = boolVal;
+        localStorage.setItem('user', JSON.stringify(parsed));
+      } catch (e) {}
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('mediaclub_silence_changed', {
+          detail: { silenced: boolVal, userId }
+        })
+      );
+    }
+  } catch (err) {
+    console.warn('Failed to save silence notifications setting:', err);
+  }
+};
+
+export const updateSilenceNotificationsApi = async (silenced) => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+
+  try {
+    const res = await fetch('/api/notifications/preferences/silence', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ silenced: Boolean(silenced) })
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Failed to update silence notifications preference on backend:', err);
+    return false;
+  }
+};
+
+export const fetchSilenceNotificationsApi = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+
+  try {
+    const res = await fetch('/api/notifications/preferences', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.notificationsSilenced !== undefined) {
+        return Boolean(data.notificationsSilenced);
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn('Failed to fetch silence notifications preference from backend:', err);
+    return null;
+  }
 };
 
 export const loadStoredNotifications = (userId) => {
